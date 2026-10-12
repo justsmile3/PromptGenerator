@@ -1,0 +1,3908 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title id="appTitle" data-i18n="app.title">🎲 AI 动漫提示词随机生成器</title>
+<style>
+  :root {
+    --bg: #0e0c18;
+    --accent: #ff5c8a;
+    --accent2: #8a7bff;
+    --text: #f0ecff;
+    --muted: #a9a3c8;
+    --ok: #4ade80;
+    --glass-a: 0.07;
+    --glass-blur: 18px;
+    --glass-border: 0.14;
+    --panel2: rgba(255,255,255,0.06);
+    --border: rgba(255,255,255,0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html { background: var(--bg); }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    min-height: 100vh;
+    padding: 16px 14px 40px;
+    line-height: 1.5;
+    overflow-x: hidden;
+  }
+  body::before, body::after {
+    content: "";
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(70px);
+    opacity: .5;
+    z-index: 0;
+    pointer-events: none;
+  }
+  body::before { width: 72vw; height: 72vw; background: var(--accent); top: -24vw; left: -24vw; }
+  body::after  { width: 66vw; height: 66vw; background: var(--accent2); bottom: -26vw; right: -22vw; }
+  .wrap { max-width: 640px; margin: 0 auto; position: relative; z-index: 1; }
+  header { text-align: center; margin-bottom: 18px; }
+  header h1 { font-size: 22px; letter-spacing: .5px; }
+  header p { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .card {
+    background: rgba(255,255,255,var(--glass-a));
+    backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+    border: 1px solid rgba(255,255,255,var(--glass-border));
+    border-radius: 18px;
+    padding: 16px;
+    margin-bottom: 14px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.28);
+  }
+  .card h2 { font-size: 14px; color: var(--muted); margin-bottom: 12px; font-weight: 600; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+  .row:last-child { margin-bottom: 0; }
+  .row label { font-size: 14px; flex: 1; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  /* switch */
+  .switch { position: relative; width: 52px; height: 30px; flex: none; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute; inset: 0; cursor: pointer;
+    background: var(--panel2); border: 1px solid var(--border);
+    border-radius: 30px; transition: .25s;
+  }
+  .slider:before {
+    content: ""; position: absolute; height: 22px; width: 22px;
+    left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: .25s;
+  }
+  .switch input:checked + .slider { background: var(--accent); border-color: var(--accent); }
+  .switch input:checked + .slider:before { transform: translateX(22px); }
+  /* select & range */
+  select, input[type=range] { accent-color: var(--accent); }
+  select {
+    background: var(--panel2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 9px 10px; font-size: 14px; width: 130px; flex: none;
+  }
+  input[type=range] { width: 130px; flex: none; }
+  .range-val { width: 30px; text-align: right; font-size: 14px; color: var(--accent2); font-weight: 600; flex: none; }
+  input[type=text], input[type=number] {
+    background: var(--panel2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 9px 10px; font-size: 14px;
+  }
+  input[type=text] { width: 100%; }
+  input[type=number] { width: 62px; flex: none; text-align: center; }
+  .params-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 2px; }
+  .params-row .lbl { font-size: 13px; color: var(--muted); flex: none; }
+  .rec-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .rec-item { background: var(--panel2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+  .rec-k { font-size: 11px; color: var(--muted); }
+  .rec-v { font-size: 15px; font-weight: 700; color: var(--accent2); margin-top: 3px; }
+  /* theme picker */
+  input[type=color] {
+    -webkit-appearance: none; appearance: none;
+    width: 54px; height: 34px; padding: 0; flex: none;
+    border: 1px solid var(--border); border-radius: 10px;
+    background: transparent; cursor: pointer;
+  }
+  input[type=color]::-webkit-color-swatch-wrapper { padding: 3px; }
+  input[type=color]::-webkit-color-swatch { border: none; border-radius: 7px; }
+  .swatches { display: flex; gap: 9px; flex-wrap: wrap; }
+  .swatch {
+    width: 44px; height: 44px; border-radius: 13px; padding: 0; cursor: pointer;
+    border: 2px solid rgba(255,255,255,0.16);
+    transition: transform .12s, border-color .12s;
+  }
+  .swatch:active { transform: scale(.93); }
+  .swatch.active { border-color: #fff; }
+  .hexval { color: var(--accent2); font-size: 11px; font-family: monospace; }
+  /* tag chips */
+  .chip {
+    display: inline-flex; align-items: center;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 9px;
+    padding: 5px 9px; margin: 0 5px 6px 0;
+    font-size: 12.5px; font-family: "SF Mono", Consolas, monospace;
+    cursor: pointer; user-select: none; -webkit-user-select: none;
+    transition: transform .1s, background .15s;
+  }
+  .chip:active { transform: scale(.93); }
+  .chip.locked { border-color: var(--accent); background: rgba(255,92,138,0.16); }
+  .chiphint { font-size: 11px; color: var(--muted); margin-top: 8px; }
+  /* history / favorites */
+  .tabs { display: flex; gap: 8px; margin-bottom: 10px; }
+  .tab {
+    flex: 1; padding: 8px; font-size: 13px; font-weight: 600; cursor: pointer;
+    background: rgba(255,255,255,0.06); color: var(--muted);
+    border: 1px solid var(--border); border-radius: 10px;
+  }
+  .tab.active { background: rgba(255,255,255,0.14); color: var(--text); border-color: var(--accent); }
+  .plist { max-height: 270px; overflow-y: auto; }
+  .pitem {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+    border-radius: 10px; padding: 8px 10px; margin-bottom: 7px;
+  }
+  .ptxt {
+    flex: 1; font-size: 11.5px; font-family: monospace; color: var(--muted);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+  }
+  .mini {
+    flex: none; font-size: 12px; padding: 5px 9px; cursor: pointer;
+    background: rgba(255,255,255,0.10); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px;
+  }
+  .mini.on { border-color: var(--accent); color: var(--accent); }
+  .empty { font-size: 12px; color: var(--muted); text-align: center; padding: 16px 0; }
+  /* 生成页紧凑化 */
+  .card h2.collapsible { cursor: pointer; user-select: none; -webkit-user-select: none; }
+  .caret {
+    float: right; font-size: 13px; color: var(--muted);
+    transition: transform .18s; display: inline-block;
+  }
+  .caret.rot { transform: rotate(-90deg); }
+  .h2btns { float: right; display: inline-flex; gap: 6px; }
+  .minibtn {
+    background: rgba(255,255,255,0.09); border: 1px solid var(--border);
+    color: var(--text); border-radius: 8px; padding: 3px 9px;
+    font-size: 12px; cursor: pointer; line-height: 1.5; font-family: inherit;
+  }
+  .minibtn:active { transform: scale(.94); }
+  .chips-box { max-height: 136px; overflow-y: auto; min-height: 58px; }
+  .recline { font-size: 12.5px; margin-top: 9px; line-height: 1.7; }
+  .recline b { color: var(--accent2); }
+  .rowtight { margin-bottom: 9px; }
+  .gencard { padding: 13px; }
+  /* AI 对话 */
+  .chatbox {
+    max-height: 46vh; overflow-y: auto; display: flex; flex-direction: column;
+    gap: 10px; padding: 6px 2px; margin-top: 6px;
+  }
+  .msg {
+    max-width: 92%; padding: 9px 12px; border-radius: 12px;
+    font-size: 13.5px; line-height: 1.68; white-space: pre-wrap;
+    word-break: break-word; overflow-wrap: anywhere;
+  }
+  .msg.user {
+    align-self: flex-end; color: #fff;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+  }
+  .msg.ai { align-self: flex-start; background: var(--panel2); border: 1px solid var(--border); }
+  .msg.err {
+    align-self: flex-start; font-size: 12.5px; color: #fca5a5;
+    background: rgba(248,113,113,.12); border: 1px solid rgba(248,113,113,.4);
+  }
+  .msg .acts { margin-top: 9px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .msg .acts .minibtn { font-size: 11px; padding: 3px 8px; }
+  .chatinput { display: flex; gap: 8px; margin-top: 10px; align-items: flex-end; }
+  .chatinput textarea { flex: 1; resize: none; min-height: 44px; max-height: 120px; }
+  body.genshin .msg.user { background: linear-gradient(135deg, #ffe6a8, #d3bc8e); color: #2a2318; }
+  .dot3::after { content: "…"; animation: dotanim 1.2s steps(4) infinite; }
+  @keyframes dotanim { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }
+  /* scene presets */
+  .scenechips { display: flex; gap: 7px; flex-wrap: wrap; }
+  .scene {
+    padding: 6px 11px; font-size: 12.5px; cursor: pointer; border-radius: 10px;
+    background: rgba(255,255,255,0.07); border: 1px solid var(--border); color: var(--text);
+    transition: transform .1s, border-color .15s;
+  }
+  .scene:active { transform: scale(.94); }
+  .scene.on { border-color: var(--accent); background: rgba(255,92,138,0.16); color: var(--accent); font-weight: 700; }
+  textarea#backupBox {
+    width: 100%; height: 72px; resize: vertical;
+    background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+    border-radius: 10px; color: var(--text); padding: 9px;
+    font-size: 11px; font-family: "SF Mono", Consolas, monospace;
+  }
+  /* game tabs */
+  .gtabs { display: flex; gap: 6px; margin-bottom: 10px; }
+  .gtab {
+    flex: 1; padding: 7px 4px; font-size: 12px; font-weight: 600; cursor: pointer;
+    background: rgba(255,255,255,0.06); color: var(--muted);
+    border: 1px solid var(--border); border-radius: 10px;
+    transition: transform .1s;
+  }
+  .gtab:active { transform: scale(.95); }
+  .gtab.active { background: rgba(255,255,255,0.15); color: var(--text); border-color: var(--accent2); }
+  .chargrid { max-height: 220px; overflow-y: auto; }
+  /* LocalDream progress */
+  .ldbar-wrap { height: 8px; background: rgba(255,255,255,0.10); border-radius: 6px; overflow: hidden; }
+  .ldbar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 6px; transition: width .25s; }
+  #ldImg { width: 100%; border-radius: 12px; display: block; }
+  .ldgrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .ldgrid img { width: 100%; border-radius: 12px; display: block; }
+  /* page nav */
+  .pagenav { display: flex; gap: 8px; margin-bottom: 14px; position: relative; z-index: 2; }
+  .pnav {
+    flex: 1; padding: 11px 6px; font-size: 14px; font-weight: 700; cursor: pointer;
+    background: rgba(255,255,255,0.07); color: var(--muted);
+    border: 1px solid var(--border); border-radius: 12px;
+    transition: transform .1s;
+  }
+  .pnav:active { transform: scale(.97); }
+  .pnav.active { background: rgba(255,255,255,0.17); color: var(--text); border-color: var(--accent); }
+  /* gallery */
+  .galgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .galitem {
+    position: relative; aspect-ratio: 1 / 1; border-radius: 12px; overflow: hidden;
+    border: 2px solid transparent; background: rgba(255,255,255,0.06); cursor: pointer;
+    transition: transform .1s;
+  }
+  .galitem:active { transform: scale(.96); }
+  .galitem img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .galitem.sel { border-color: var(--accent); }
+  .galitem .tick {
+    position: absolute; top: 5px; right: 5px; width: 22px; height: 22px; border-radius: 50%;
+    background: rgba(0,0,0,0.5); border: 1.5px solid rgba(255,255,255,0.75);
+    font-size: 13px; line-height: 20px; text-align: center; color: #fff;
+  }
+  .galitem.sel .tick { background: var(--accent); border-color: var(--accent); }
+  .galitem .upbadge {
+    position: absolute; left: 5px; top: 5px;
+    background: rgba(255,210,111,0.94); color: #231d10;
+    font-size: 9.5px; font-weight: 800; padding: 1px 5px; border-radius: 4px;
+    letter-spacing: .3px;
+  }
+  #galViewer {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999;
+    padding: 18px; overflow-y: auto; display: none;
+  }
+  #galViewer img { width: 100%; border-radius: 12px; display: block; }
+  #appToast {
+    display: none; position: fixed; left: 50%; bottom: 44px; transform: translateX(-50%);
+    background: rgba(0,0,0,0.88); color: #fff; padding: 10px 18px; border-radius: 12px;
+    font-size: 13px; z-index: 10002; max-width: 80%; text-align: center;
+  }
+  #confirmBox {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.82);
+    z-index: 10001; padding: 24px; align-items: center; justify-content: center;
+  }
+  /* 底部导航 */
+  body { padding-bottom: 98px; }
+  .bottomnav {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 500;
+    display: flex; gap: 2px;
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px));
+    background: rgba(20,17,32,0.88);
+    backdrop-filter: blur(20px) saturate(150%);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+    border-top: 1px solid rgba(255,255,255,0.12);
+  }
+  .bnitem {
+    flex: 1; padding: 8px 2px 6px; cursor: pointer; background: none; border: none;
+    color: var(--muted); font-size: 10.5px; font-weight: 600;
+    border-radius: 12px; position: relative;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    transition: transform .1s, background .15s;
+    font-family: inherit;
+  }
+  .bnitem .bi { font-size: 19px; line-height: 1; }
+  .bnitem:active { transform: scale(.92); }
+  .bnitem.active { color: var(--accent); background: rgba(255,255,255,0.09); }
+  .bnbadge {
+    position: absolute; top: 3px; right: 50%; transform: translateX(22px);
+    background: var(--accent); color: #fff; font-size: 9px; font-weight: 700;
+    min-width: 15px; height: 15px; line-height: 15px; border-radius: 8px; padding: 0 3px;
+  }
+  .bnbadge:empty { display: none; }
+  /* ================= 原神风格 UI ================= */
+  body.genshin {
+    font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", Georgia, serif;
+    --text: #ece5d8;
+    --muted: #a99c86;
+  }
+  body.genshin header h1 {
+    color: #ffd26f;
+    font-size: 24px;
+    letter-spacing: 3px;
+    text-shadow: 0 0 16px rgba(255,210,111,0.45);
+  }
+  body.genshin header p { color: #a99c86; letter-spacing: 1px; }
+  body.genshin .card {
+    border-radius: 4px;
+    border: 1px solid rgba(211,188,142,0.42);
+    background: linear-gradient(160deg, rgba(44,41,64,0.82) 0%, rgba(21,19,33,0.90) 100%);
+    box-shadow:
+      inset 0 0 0 1px rgba(211,188,142,0.10),
+      inset 0 1px 0 rgba(255,210,111,0.10),
+      0 10px 34px rgba(0,0,0,0.55);
+    position: relative;
+  }
+  body.genshin .card::before,
+  body.genshin .card::after {
+    content: "";
+    position: absolute;
+    width: 9px; height: 9px;
+    background: linear-gradient(135deg, #ffe6a8, #d3bc8e);
+    transform: rotate(45deg);
+    box-shadow: 0 0 8px rgba(255,210,111,0.55);
+    pointer-events: none;
+  }
+  body.genshin .card::before { top: -5px; left: 14px; }
+  body.genshin .card::after  { bottom: -5px; right: 14px; }
+  body.genshin .card h2 {
+    color: #ffd26f;
+    letter-spacing: 1px;
+    padding-bottom: 9px;
+    border-bottom: 1px solid rgba(211,188,142,0.26);
+    position: relative;
+  }
+  body.genshin .card h2::after {
+    content: "";
+    position: absolute; left: 0; bottom: -1px;
+    width: 58px; height: 2px;
+    background: linear-gradient(90deg, #ffd26f, rgba(255,210,111,0));
+  }
+  body.genshin .btn {
+    border-radius: 3px;
+    border: 1px solid rgba(211,188,142,0.45);
+    background: linear-gradient(180deg, rgba(70,66,92,0.92), rgba(38,36,56,0.92));
+    letter-spacing: 1px;
+  }
+  body.genshin .btn-primary {
+    background: linear-gradient(135deg, #ffe6a8 0%, #d3bc8e 52%, #b89b63 100%);
+    color: #2a2318;
+    border: 1px solid #ffe6a8;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.35);
+    font-weight: 800;
+  }
+  body.genshin .chip, body.genshin .scene, body.genshin .gtab,
+  body.genshin .tab, body.genshin .mini, body.genshin .pitem {
+    border-radius: 3px;
+    border-color: rgba(211,188,142,0.32);
+  }
+  body.genshin .chip.locked, body.genshin .scene.on {
+    border-color: #ffd26f;
+    background: rgba(255,210,111,0.16);
+    color: #ffe6a8;
+  }
+  body.genshin .gtab.active, body.genshin .tab.active { border-color: #ffd26f; color: #ffe6a8; }
+  body.genshin select, body.genshin input[type=text], body.genshin input[type=number],
+  body.genshin textarea {
+    border-radius: 3px;
+    border-color: rgba(211,188,142,0.32);
+  }
+  body.genshin .out-box { border-radius: 4px; border-color: rgba(211,188,142,0.28); }
+  body.genshin .rec-item { border-radius: 4px; border-color: rgba(211,188,142,0.28); }
+  body.genshin .rec-v { color: #ffe6a8; }
+  body.genshin .range-val { color: #ffe6a8; }
+  body.genshin .bottomnav {
+    background: linear-gradient(180deg, rgba(32,29,48,0.94), rgba(17,15,26,0.97));
+    border-top: 1px solid rgba(211,188,142,0.45);
+  }
+  body.genshin .bnitem.active { color: #ffd26f; background: rgba(255,210,111,0.10); }
+  body.genshin .bnbadge { background: #d3bc8e; color: #231d10; }
+  body.genshin .ldbar { background: linear-gradient(90deg, #d3bc8e, #ffd26f); }
+  body.genshin .hexval { color: #d3bc8e; }
+  body.genshin .warn {
+    background: rgba(255,150,110,0.10);
+    border-color: rgba(255,150,110,0.35);
+    color: #f4c9b4;
+    border-radius: 4px;
+  }
+  body.genshin.pnav-glow .swatch { border-radius: 4px; }
+  /* output */
+  .out-box {
+    background: var(--panel2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px; font-size: 14px;
+    word-break: break-word; min-height: 90px; white-space: pre-wrap;
+    font-family: "SF Mono", Consolas, monospace; line-height: 1.7;
+  }
+  .out-label { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+  .tok { font-size: 12px; font-weight: 700; margin-left: 6px; color: var(--ok); }
+  .out-box.neg { border-color: rgba(255,140,120,0.28); background: rgba(255,110,90,0.08); color: #f7cdc7; }
+  /* buttons */
+  .btn {
+    border: none; border-radius: 12px; padding: 12px 16px;
+    font-size: 15px; font-weight: 700; cursor: pointer; transition: .15s;
+    color: #fff; background: var(--panel2); border: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .btn:active { transform: scale(.97); }
+  .btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent2)); border: none; }
+  .btn-copy { flex: 1; }
+  .btn-row { display: flex; gap: 10px; }
+  .btn-big { width: 100%; padding: 15px; font-size: 16px; }
+  .btn-sm { padding: 9px 12px; font-size: 13px; }
+  .copied { background: var(--ok) !important; border-color: var(--ok) !important; color: #06280f !important; }
+  .note {
+    font-size: 12px; color: var(--muted); text-align: center; margin-top: 10px;
+  }
+  .warn {
+    background: rgba(255,92,138,0.10);
+    border: 1px solid rgba(255,92,138,0.28);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: #f7c2d1;
+    border-radius: 14px; padding: 10px 12px; font-size: 12px; margin-bottom: 14px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1 data-i18n="app.title">🎲 AI 动漫提示词随机生成器</h1>
+    <p data-i18n="app.sub"><span data-i18n="nav.generate">生成</span> danbooru 风格标签 · 适配 SD1.5 动漫模型（Anything / MeinaMix 等）</p>
+  </header>
+
+  <div id="page-main">
+  <div class="warn" data-page="settings" data-i18n-html="warn.age">
+    ⚠️ <b>18+ 成人内容</b>。NSFW 标签仅限 <b>成年、虚构动漫角色</b> 的合意内容；<b>严禁</b>用于未成年、非自愿、真实人物或任何违法用途。
+  </div>
+
+  <div class="card" data-page="settings">
+    <h2 data-i18n="sec.settings">⚙️ 设置</h2>
+    <div class="row" style="margin-bottom:12px;">
+      <label data-i18n="lbl.uilang">🌐 界面语言</label>
+      <select id="uiLang" style="width:130px;">
+        <option value="zh" data-i18n="opt.uizh">中文界面</option>
+        <option value="en" data-i18n="opt.uien">English UI</option>
+      </select>
+    </div>
+
+
+    <div class="row">
+      <label><span data-i18n="lbl.outlang">🌐 输出语言</span>
+        <div class="hint" data-i18n="hint.outlang"><span data-i18n="opt.zh">中文</span>适合豆包等国产 AI；英文适合 SD1.5 模型</div>
+      </label>
+      <select id="lang">
+        <option value="en" selected>English</option>
+        <option value="zh" data-i18n="opt.zh">中文</option>
+        <option value="both" data-i18n="opt.both">中英双语</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <label><span data-i18n="lbl.nsfw">🔞 NSFW 内容</span>
+        <div class="hint" data-i18n="hint.nsfw">开启后加入成人标签</div>
+      </label>
+      <label class="switch">
+        <input type="checkbox" id="nsfw" checked>
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div class="row">
+      <label><span data-i18n="lbl.level">🔥 NSFW 强度</span>
+        <div class="hint" data-i18n="hint.level">甜辣=无敏感词（国内平台可过审）/ 中度裸露 / 重度露骨</div>
+      </label>
+      <select id="nsfwLevel">
+        <option value="mild" data-i18n="opt.mild">甜辣 · 平台过审向</option>
+        <option value="soft" data-i18n="opt.soft">轻度 · 擦边挑逗</option>
+        <option value="medium" selected data-i18n="opt.medium">中度 · 裸露</option>
+        <option value="explicit" data-i18n="opt.explicit">重度 · 露骨性行为</option>
+        <option value="extreme" data-i18n="opt.extreme">极限 · 全类别火力全开</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <label><span data-i18n="lbl.scene">🎬 场景逻辑</span>
+        <div class="hint" data-i18n="hint.scene">自动 = 每次抽一个连贯场景（单一行为 + 匹配姿势/表情/地点）</div>
+      </label>
+      <select id="nsfwSceneSel" style="width:150px;">
+        <option value="auto" selected data-i18n="opt.auto">🎲 自动</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <label data-i18n="lbl.style">🎨 风格预设</label>
+      <select id="preset">
+        <option value="general" data-i18n="opt.general">通用</option>
+        <option value="soft" data-i18n="opt.stylesoft">唯美 / 柔和</option>
+        <option value="dark" data-i18n="opt.dark">暗黑 / 哥特</option>
+        <option value="cute" data-i18n="opt.cute">可爱 / Q版</option>
+        <option value="painterly" data-i18n="opt.painterly">厚涂 / 插画</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <label><span data-i18n="lbl.count">🏷️ 标签丰富度</span>
+        <div class="hint" data-i18n="hint.count">基础标签数（NSFW 标签会额外保留，总上限 77 词）</div>
+      </label>
+      <input type="range" id="count" min="5" max="24" value="14">
+      <span class="range-val" id="countVal">14</span>
+    </div>
+
+    <div class="row" style="align-items:flex-start; margin-bottom:8px;">
+      <label><span data-i18n="lbl.custom">✏️ 自定义标签</span>
+        <div class="hint" data-i18n="hint.custom"><span data-i18n="opt.en">英文</span>逗号分隔，始终放在开头，生成器自动补齐其余标签</div>
+      </label>
+    </div>
+    <input type="text" id="custom" placeholder="例如：fox ears, red ribbon, winter" data-i18n-ph="ph.custom" autocomplete="off">
+
+    <div class="row" style="margin:14px 0 8px;">
+      <label data-i18n="lbl.params">🎛️ 出图参数</label>
+    </div>
+    <div class="params-row">
+      <span class="lbl" data-i18n="lbl.sampler">采样器</span>
+      <select id="sampler" style="width:170px;">
+        <option>DPM++ 2M Karras</option>
+        <option>Euler a</option>
+        <option>DPM++ SDE Karras</option>
+        <option>DPM++ 2M</option>
+        <option>Euler</option>
+        <option>UniPC</option>
+        <option>LCM</option>
+      </select>
+      <span class="lbl" data-i18n="lbl.steps">步数</span>
+      <input type="number" id="steps" min="1" max="50" value="24">
+      <span class="lbl">CFG</span>
+      <input type="number" id="cfg" min="1" max="30" value="7" step="0.5">
+    </div>
+
+    <div class="row" style="margin-top:14px;">
+      <label><span data-i18n="lbl.autorec">🎯 自动应用推荐参数</span>
+        <div class="hint" data-i18n="hint.autorec">每次生成后，按提示词自动调整上方参数</div>
+      </label>
+      <label class="switch">
+        <input type="checkbox" id="autoRec" checked>
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div class="row">
+      <label><span data-i18n="lbl.fast">⚡ 快速模型模式</span>
+        <div class="hint" data-i18n="hint.fast">用 DMD2 / LCM 模型时打开（推荐 LCM + CFG 1 + 8 步）</div>
+      </label>
+      <label class="switch">
+        <input type="checkbox" id="fastModel">
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div class="row">
+      <label><span data-i18n="lbl.weights">⚖️ 权重模式</span>
+        <div class="hint" data-i18n="hint.weights">给质量/主体标签加权，如 (masterpiece:1.2)</div>
+      </label>
+      <label class="switch">
+        <input type="checkbox" id="weights">
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div class="row" style="align-items:flex-start; margin:14px 0 6px;">
+      <label><span data-i18n="lbl.preset">🎬 场景预设</span>
+        <div class="hint" data-i18n="hint.preset">一键套用整套主题标签，再点一次取消</div>
+      </label>
+    </div>
+    <div class="scenechips" id="scenes"></div>
+
+    <div class="row" style="margin-top:14px;">
+      <label><span data-i18n="lbl.sentence">📝 自然语言描述句</span>
+        <div class="hint" data-i18n="hint.sentence">输出通顺中文长句，豆包这类对话 AI 效果更好</div>
+      </label>
+      <label class="switch">
+        <input type="checkbox" id="sentence">
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div class="row" style="align-items:flex-start; margin:8px 0 8px;">
+      <label><span data-i18n="lbl.exclude">🚫 排除标签</span>
+        <div class="hint" data-i18n="hint.exclude"><span data-i18n="opt.en">英文</span>逗号分隔，这些标签永不出现</div>
+      </label>
+    </div>
+    <input type="text" id="exclude" placeholder="例如：glasses, hat, masculine" data-i18n-ph="ph.exclude" autocomplete="off">
+
+    <div class="row" style="align-items:flex-start; margin:12px 0 8px;">
+      <label><span data-i18n="lbl.extraneg">➕ 额外反向词</span>
+        <div class="hint" data-i18n="hint.extraneg">附加在自动反向词后面</div>
+      </label>
+    </div>
+    <input type="text" id="extraNeg" placeholder="例如：extra fingers, bad feet" data-i18n-ph="ph.extraneg" autocomplete="off">
+
+    <div class="row" style="margin-top:14px;">
+      <label><span data-i18n="lbl.seed">🎲 种子 (Seed)</span>
+        <div class="hint" id="seedVal">—</div>
+      </label>
+      <label class="switch">
+        <input type="checkbox" id="seedLock">
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <div class="card gencard" data-page="settings">
+    <h2 class="collapsible" data-target="sndBody"><span data-i18n="sec.sound">🔔 完成提示音</span><span class="tok" id="sndSummary"></span><span class="caret rot" id="sndCaret">▾</span></h2>
+    <div class="collapse-body" id="sndBody" style="display:none;">
+      <div class="row rowtight" style="margin-top:6px;">
+        <label><span data-i18n="lbl.sndplay">出图 / 超分完成时播放</span><span class="hint" id="sndNow" style="margin-top:4px;" data-i18n="snd.default">默认（系统通知音）</span></label>
+        <label class="switch"><input type="checkbox" id="sndOn" checked><span class="slider"></span></label>
+      </div>
+      <div class="btn-row" style="margin-top:10px;">
+        <button class="btn btn-sm btn-copy" id="sndPickSys" data-i18n="btn.sndsys">🔔 系统提示音</button>
+        <button class="btn btn-sm btn-copy" id="sndPickFile" data-i18n="btn.sndfile">📁 音频文件</button>
+      </div>
+      <div id="sndList" class="plist" style="display:none;max-height:210px;overflow-y:auto;margin-top:10px;"></div>
+      <div class="btn-row" style="margin-top:10px;">
+        <button class="btn btn-sm btn-copy" id="sndTest" data-i18n="btn.sndtest">▶️ 试听</button>
+        <button class="btn btn-sm btn-copy" id="sndDefault" data-i18n="btn.sndreset">↩︎ 恢复默认</button>
+      </div>
+      <div class="hint" id="sndInfo" style="margin-top:9px;line-height:1.7;"></div>
+    </div>
+  </div>
+
+  <div class="card" data-page="chars">
+    <h2><span data-i18n="sec.chars">🎮 角色库 · 米哈游</span> <span class="tok" id="charCount"></span></h2>
+    <div class="hint" style="margin-bottom:9px;" data-i18n="hint.chars">点角色选中（可多选，做双人图），再点取消。会自动带上作品标签</div>
+    <div class="gtabs">
+      <button class="gtab active" data-game="genshin" data-i18n="game.genshin">原神</button>
+      <button class="gtab" data-game="hsr" data-i18n="game.hsr">星穹铁道</button>
+      <button class="gtab" data-game="hi3" data-i18n="game.hi3">崩坏3</button>
+      <button class="gtab" data-game="zzz" data-i18n="game.zzz">绝区零</button>
+    </div>
+    <div class="chargrid"><div class="scenechips" id="charList"></div></div>
+  </div>
+
+  <div class="card gencard" data-page="generate">
+    <h2><span data-i18n="sec.pos">📝 正向提示词</span><span class="tok" id="tokCount"></span><span class="h2btns"><button class="minibtn" id="copyPos">📋</button><button class="minibtn" id="share">📤</button></span></h2>
+    <div class="out-box chips-box" id="posOut" data-i18n="out.empty">点击下方按钮生成</div>
+    <div class="chiphint" style="margin-top:6px;" data-i18n="chip.hint">💡 点标签 = 重掷 · 长按 = 锁定</div>
+    <div class="chiphint" id="scInfo" style="color:var(--accent2);"></div>
+    <div class="recline" id="recLine">—</div>
+    <div id="sentenceBox" style="display:none;margin-top:9px;">
+      <div class="chiphint" data-i18n="sent.label"><span data-i18n="lbl.sentence">📝 自然语言描述句</span>（复制/分享用这个）</div>
+      <div class="out-box" id="sentenceOut"></div>
+    </div>
+  </div>
+
+  <div class="card gencard" data-page="generate">
+    <h2 class="collapsible" data-target="negBody"><span data-i18n="sec.neg">🚫 反向提示词</span><span class="tok" id="negTokCount"></span><span class="caret rot" id="negCaret">▾</span></h2>
+    <div class="collapse-body" id="negBody" style="display:none;">
+      <div class="out-box neg" id="negOut" style="margin-top:6px;" data-i18n="out.empty">点击下方按钮生成</div>
+      <div class="btn-row" style="margin-top:8px;">
+        <button class="btn btn-sm btn-copy" id="copyNeg" data-i18n="btn.copyneg">📋 复制反向</button>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn btn-primary btn-big" id="gen" data-page="generate" data-i18n="btn.gen">🎲 随机生成</button>
+  <div class="btn-row" style="margin-top:8px;margin-bottom:12px;">
+    <button class="btn btn-sm btn-copy" id="genVary" data-page="generate" data-i18n="btn.vary">🎲 微调变体</button>
+    <button class="btn btn-sm btn-copy" id="copyAll" data-page="generate" data-i18n="btn.copyall"><span data-i18n="btn.galvcopy">📋 复制配方</span></button>
+  </div>
+
+  <div class="card gencard" data-page="generate">
+    <h2><span data-i18n="sec.ld">🖼️ LocalDream 出图</span><span class="tok" id="ldStatus"></span><span class="h2btns"><button class="minibtn" id="ldMore">⚙️</button></span></h2>
+    <div class="btn-row">
+      <button class="btn btn-sm btn-copy" id="ldCheck" data-i18n="btn.ldcheck">🔌 检测</button>
+      <button class="btn btn-sm btn-copy btn-primary" id="ldGen" data-i18n="btn.ldgen">🖼️ 生成图片</button>
+    </div>
+    <div id="ldProgWrap" style="display:none;margin-top:10px;">
+      <div class="ldbar-wrap"><div class="ldbar" id="ldBar"></div></div>
+      <div class="hint" id="ldProg" style="margin-top:6px;">—</div>
+    </div>
+    <div id="ldImgWrap" style="display:none;margin-top:10px;">
+      <div class="ldgrid" id="ldImgGrid"></div>
+      <div class="btn-row" style="margin-top:8px;">
+        <button class="btn btn-sm btn-copy btn-primary" id="ldVary" data-i18n="btn.ldvary"><span data-i18n="btn.galvvary">🎲 微调重掷</span></button>
+      </div>
+      <div class="btn-row" style="margin-top:8px;">
+        <button class="btn btn-sm btn-copy" id="ldSave" data-i18n="btn.ldsave"><span data-i18n="btn.galbatchsave">💾 保存</span></button>
+        <button class="btn btn-sm btn-copy" id="ldGoGal" data-i18n="btn.ldgal">📚 画廊</button>
+      </div>
+    </div>
+
+    <div id="ldSettings" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
+      <div class="row rowtight">
+        <label data-i18n="lbl.ldautogal">💾 出图后自动存入画廊</label>
+        <label class="switch"><input type="checkbox" id="autoGal" checked><span class="slider"></span></label>
+      </div>
+      <div class="row rowtight">
+        <label data-i18n="lbl.ldbatch">🔢 每次生成张数</label>
+        <select id="batchCount">
+          <option value="1" selected data-i18n="opt.n1">1 张</option>
+          <option value="2" data-i18n="opt.n2">2 张</option>
+          <option value="4" data-i18n="opt.n4">4 张</option>
+          <option value="6" data-i18n="opt.n6">6 张</option>
+          <option value="8" data-i18n="opt.n8">8 张</option>
+        </select>
+      </div>
+      <div class="row rowtight">
+        <label data-i18n="lbl.ldautoup">🔍 出图后自动超分</label>
+        <label class="switch"><input type="checkbox" id="autoUpscale"><span class="slider"></span></label>
+      </div>
+      <div class="hint" style="margin:10px 0 6px;line-height:1.6;" data-i18n-html="hint.uppath">
+        超分模型路径：<code>&lt;模型目录&gt;/models/&lt;ID&gt;/upscaler.bin</code><br>
+        ID = <code>upscaler_anime</code>（动漫）或 <code>upscaler_realistic</code>（写实）
+      </div>
+      <input type="text" id="upscalerPath" placeholder="/data/data/io.github.xororz.localdream/files/models/upscaler_anime/upscaler.bin" autocomplete="off">
+      <div class="btn-row" style="margin-top:8px;">
+        <button class="btn btn-sm btn-copy" id="upscaleProbe" data-i18n="btn.upprobe">🔎 自动探测</button>
+        <button class="btn btn-sm btn-copy" id="upscaleTest" data-i18n="btn.uptest">🔌 测试</button>
+      </div>
+      <button class="btn btn-sm" id="upscaleNow" style="width:100%;margin-top:8px;" data-i18n="btn.upnow">🔍 对当前图超分</button>
+      <div class="hint" id="upTestInfo" style="margin-top:8px;white-space:pre-wrap;"></div>
+      <div style="background:rgba(255,92,138,0.10);border:1px solid rgba(255,92,138,0.28);color:#f7c2d1;border-radius:12px;padding:9px 11px;font-size:11.5px;margin-top:10px;line-height:1.6;" data-i18n-html="warn.ld">
+        ⚠️ 出图前需先在 <b>LocalDream</b> 加载模型；超分需先打开它的「超分」页。分辨率需与 LocalDream 一致（一般 512×512）。
+      </div>
+    </div>
+  </div>
+
+  <div class="card gencard" data-page="generate">
+    <h2 class="collapsible" data-target="histBody"><span data-i18n="sec.hist"><span data-i18n="tab.hist">🕘 历史 </span>&amp; ⭐ 收藏</span><span class="tok" id="histSummary"></span><span class="caret rot" id="histCaret">▾</span></h2>
+    <div class="collapse-body" id="histBody" style="display:none;">
+      <div class="tabs" style="margin-top:6px;">
+        <button class="tab active" data-tab="hist"><span data-i18n="tab.hist">🕘 历史 </span><span id="histN">0</span></button>
+        <button class="tab" data-tab="fav"><span data-i18n="tab.fav">⭐ 收藏 </span><span id="favN">0</span></button>
+      </div>
+      <div id="histList" class="plist"></div>
+      <div id="favList" class="plist" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- ================= AI 对话 ================= -->
+  <div class="card gencard" data-page="chat">
+    <h2><span data-i18n="sec.chat">💬 AI 对话</span><span class="tok" id="aiModelBadge"></span><span class="h2btns"><button class="minibtn" id="aiCfgBtn">⚙️</button><button class="minibtn" id="aiClear">🗑</button></span></h2>
+
+    <div id="aiCfgBox" style="display:none;">
+      <div class="row rowtight">
+        <label data-i18n="lbl.aipreset">平台预设</label>
+        <select id="aiPreset" style="width:170px;"></select>
+      </div>
+      <div class="hint" id="aiPresetHint" style="margin:2px 0 10px;line-height:1.7;"></div>
+      <label class="hint" style="display:block;">Base URL</label>
+      <input type="text" id="aiBase" placeholder="https://api.openai.com/v1" autocomplete="off">
+      <label class="hint" style="display:block;margin-top:9px;">API Key</label>
+      <input type="text" id="aiKey" placeholder="粘贴你自己的 Key" data-i18n-ph="ph.aikey" autocomplete="off">
+      <label class="hint" style="display:block;margin-top:9px;" data-i18n="lbl.aimodel">模型名</label>
+      <input type="text" id="aiModelName" placeholder="gpt-4o-mini" autocomplete="off">
+      <div class="row rowtight" style="margin-top:11px;">
+        <label><span data-i18n="lbl.aitemp">温度 </span><span class="range-val" id="aiTempVal">0.8</span></label>
+        <input type="range" id="aiTemp" min="0" max="2" step="0.1" value="0.8" style="width:130px;">
+      </div>
+      <label class="hint" style="display:block;margin-top:9px;" data-i18n="lbl.aisys">系统提示词（决定 AI 的角色）</label>
+      <textarea id="aiSys" rows="3" style="margin-top:6px;"></textarea>
+      <div class="btn-row" style="margin-top:10px;">
+        <button class="btn btn-sm btn-copy" id="aiPing" data-i18n="btn.aiping"><span data-i18n="btn.uptest">🔌 测试</span>连接</button>
+        <button class="btn btn-sm btn-copy" id="aiPresetApply" data-i18n="btn.aiapply">↩︎ 套用预设</button>
+      </div>
+      <div class="hint" id="aiCfgInfo" style="margin-top:9px;white-space:pre-wrap;line-height:1.7;"></div>
+      <div class="warn" style="margin-top:11px;" data-i18n-html="warn.aikey">🔑 API Key 只保存在本机 App 私有存储，不会上传到任何第三方服务器。请使用你自己注册的 Key，不要用别人分享的。</div>
+    </div>
+
+    <div id="aiMsgs" class="chatbox">
+      <div class="empty">还没有对话。<br>点右上角 ⚙️ 配置好 API 后，就能让它帮你写提示词了。</div>
+    </div>
+
+    <div class="chatinput">
+      <textarea id="aiInput" rows="1" placeholder="描述你想要的画面，让它帮你写 danbooru 标签…" data-i18n-ph="ph.aiinput"></textarea>
+      <button class="btn btn-sm btn-primary" id="aiSend" data-i18n="btn.aisend">发送</button>
+      <button class="btn btn-sm" id="aiStop" style="display:none;">■</button>
+    </div>
+    <div class="chiphint" style="margin-top:6px;" data-i18n="hint.aiinput">Enter 发送 · Shift+Enter 换行 · AI 回复下方可「↧ 导入提示词」</div>
+  </div>
+
+  <div class="card" style="margin-top:14px;" data-page="more">
+    <h2 data-i18n="sec.theme">🎨 外观 / 主题</h2>
+    <div class="row" style="margin-bottom:12px;">
+      <label><span data-i18n="lbl.uistyle">✨ UI 风格</span>
+        <div class="hint" data-i18n="hint.uistyle"><span data-i18n="opt.genshin"><span data-i18n="game.genshin">原神</span>风</span> = 金边斜角 + 菱形装饰 + 衬线标题</div>
+      </label>
+      <select id="uiStyle">
+        <option value="modern" selected data-i18n="opt.modern">现代磨砂</option>
+        <option value="genshin" data-i18n="opt.genshin"><span data-i18n="game.genshin">原神</span>风</option>
+      </select>
+    </div>
+    <div class="hint" style="margin-bottom:10px;" data-i18n="hint.swatch">点色卡快速换肤，或用取色器自定义（自动保存）</div>
+    <div class="swatches" id="swatches"></div>
+
+    <div class="row" style="margin-top:14px;">
+      <label><span data-i18n="lbl.accent">主色 </span><span class="hexval" id="accentHex"></span></label>
+      <input type="color" id="accentPick" value="#ff5c8a">
+    </div>
+    <div class="row">
+      <label><span data-i18n="lbl.accent2">辅色 </span><span class="hexval" id="accent2Hex"></span></label>
+      <input type="color" id="accent2Pick" value="#8a7bff">
+    </div>
+    <div class="row">
+      <label><span data-i18n="lbl.bg">背景色 </span><span class="hexval" id="bgHex"></span></label>
+      <input type="color" id="bgPick" value="#0e0c18">
+    </div>
+    <div class="row">
+      <label data-i18n="lbl.blur">磨砂模糊强度</label>
+      <input type="range" id="blurRange" min="0" max="40" value="18">
+      <span class="range-val" id="blurVal">18</span>
+    </div>
+    <div class="row">
+      <label data-i18n="lbl.alpha">玻璃不透明度</label>
+      <input type="range" id="alphaRange" min="2" max="30" value="7">
+      <span class="range-val" id="alphaVal">7</span>
+    </div>
+    <button class="btn btn-sm" id="resetTheme" style="width:100%;margin-top:6px;" data-i18n="btn.resettheme">↺ 恢复默认主题</button>
+  </div>
+
+  <div class="card" data-page="more">
+    <h2 data-i18n="sec.backup">💾 配置备份 &amp; 批量</h2>
+    <div class="hint" style="margin-bottom:9px;" data-i18n="hint.backup">导出后把文本存起来（备忘录/微信收藏），换手机或重装粘贴回来即可恢复</div>
+    <textarea id="backupBox" placeholder="点「导出配置」生成文本 / 或粘贴旧配置后点「导入配置」" data-i18n-ph="ph.backup"></textarea>
+    <div class="btn-row" style="margin-top:10px;">
+      <button class="btn btn-sm btn-copy" id="exportCfg" data-i18n="btn.export">📤 导出配置</button>
+      <button class="btn btn-sm btn-copy" id="importCfg" data-i18n="btn.import">📥 导入配置</button>
+    </div>
+    <button class="btn btn-sm" id="batchGen" style="width:100%;margin-top:10px;" data-i18n="btn.batchgen">🎲 批量生成 5 组到历史</button>
+  </div>
+
+  <p class="note" data-page="more">v2.4 · 底部菜单分页 · 支持批量出图 + 超分 · 米哈游 140 角色 · 中/英/双语</p>
+  </div><!-- /page-main -->
+
+  <div id="page-gallery" data-page="gallery" style="display:none;">
+    <div class="card">
+      <h2><span data-i18n="sec.gallery">🖼️ 画廊</span> <span class="tok" id="galInfo"></span></h2>
+      <div class="hint" style="margin-bottom:10px;" data-i18n-html="hint.gallery">出图会自动存入这里。点「选择」进入多选模式，可批量<b>超分 / 保存相册 / 删除</b></div>
+      <div class="btn-row">
+        <button class="btn btn-sm btn-copy" id="galSelectToggle" data-i18n="btn.galsel">☑️ 选择</button>
+        <button class="btn btn-sm btn-copy" id="galSelAll" data-i18n="btn.galall">全选</button>
+        <button class="btn btn-sm btn-copy" id="galRefresh" data-i18n="btn.galrefresh">🔄 刷新</button>
+      </div>
+      <div class="btn-row" id="galBatchBar" style="display:none;margin-top:10px;">
+        <button class="btn btn-sm btn-copy" id="galBatchUp" data-i18n="btn.galbatchup">🔍 超分</button>
+        <button class="btn btn-sm btn-copy" id="galBatchSave" data-i18n="btn.ldsave"><span data-i18n="btn.galbatchsave">💾 保存</span></button>
+        <button class="btn btn-sm btn-copy" id="galBatchDel" data-i18n="btn.galbatchdel">🗑 删除</button>
+        <button class="btn btn-sm btn-copy" id="galBatchCancel" data-i18n="btn.galbatchcancel">✖ 取消</button>
+      </div>
+      <div id="galUpWrap" style="display:none;margin-top:10px;">
+        <div class="ldbar-wrap"><div class="ldbar" id="galUpBar"></div></div>
+        <div class="hint" id="galUpProg" style="margin-top:6px;">—</div>
+      </div>
+      <div class="hint" id="galSelInfo" style="margin-top:9px;">—</div>
+    </div>
+    <div class="galgrid" id="galGrid"></div>
+  </div>
+
+  <div id="galViewer">
+    <img id="galViewerImg" alt="预览">
+    <div class="hint" id="galViewerMeta" style="margin-top:12px;color:#c9c4e0;white-space:pre-wrap;"></div>
+    <div class="btn-row" style="margin-top:12px;">
+      <button class="btn btn-sm btn-copy" id="galViewerCopy" data-i18n="btn.copyall"><span data-i18n="btn.galvcopy">📋 复制配方</span></button>
+      <button class="btn btn-sm btn-copy" id="galViewerUp" data-i18n="btn.galvup"><span data-i18n="btn.galbatchup">🔍 超分</span>这张</button>
+    </div>
+    <div class="btn-row" style="margin-top:8px;">
+      <button class="btn btn-sm btn-copy btn-primary" id="galViewerVary" data-i18n="btn.ldvary"><span data-i18n="btn.galvvary">🎲 微调重掷</span></button>
+      <button class="btn btn-sm btn-copy" id="galViewerClose" data-i18n="btn.galvclose">✖ 关闭</button>
+    </div>
+  </div>
+
+  <div id="appToast"></div>
+  <div id="confirmBox">
+    <div class="card" style="max-width:340px;width:100%;margin:0;">
+      <div id="confirmMsg" style="font-size:14px;margin-bottom:16px;line-height:1.6;"></div>
+      <div class="btn-row">
+        <button class="btn btn-sm btn-copy" id="confirmNo" data-i18n="btn.cancel">取消</button>
+        <button class="btn btn-sm btn-copy btn-primary" id="confirmYes" data-i18n="btn.ok">确定</button>
+      </div>
+    </div>
+  </div>
+  <nav class="bottomnav">
+    <button class="bnitem active" data-nav="generate"><span class="bi">🎲</span><span data-i18n="nav.generate">生成</span></button>
+    <button class="bnitem" data-nav="chat"><span class="bi">💬</span><span data-i18n="nav.chat">对话</span></button>
+    <button class="bnitem" data-nav="settings"><span class="bi">🎛️</span><span data-i18n="nav.settings">设置</span></button>
+    <button class="bnitem" data-nav="chars"><span class="bi">🎮</span><span data-i18n="nav.chars">角色</span></button>
+    <button class="bnitem" data-nav="gallery"><span class="bi">🖼️</span><span data-i18n="nav.gallery">画廊</span><span class="bnbadge" id="galBadge"></span></button>
+    <button class="bnitem" data-nav="more"><span class="bi">🎨</span><span data-i18n="nav.more">更多</span></button>
+  </nav>
+</div>
+
+<script>
+(function () {
+  const P = {
+    quality: ["masterpiece","best quality","ultra-detailed","highres","absurdres","extremely detailed CG","8k wallpaper","amazing quality","very aesthetic"],
+    style: ["anime style","anime coloring","anime screencap","official art","beautiful detailed eyes","detailed background","sharp focus","delicate illustration"],
+    subject: ["1girl","1girl","1girl","1girl","1girl","solo","1girl, solo"],
+    hair: ["long hair","short hair","twin tails","ponytail","braid","hair bun","bob cut","hime cut","wavy hair","straight hair","silver hair","white hair","black hair","blonde hair","brown hair","pink hair","blue hair","purple hair","red hair","green hair","gradient hair"],
+    eyes: ["blue eyes","red eyes","green eyes","purple eyes","yellow eyes","pink eyes","aqua eyes","brown eyes","heterochromia"],
+    body: ["slim","petite","slender","curvy","mature","athletic"],
+    outfit: ["school uniform","serafuku","sailor outfit","dress","maid outfit","kimono","yukata","sweater","hoodie","t-shirt","casual","suit","nurse uniform","witch costume","armor","idol costume","pajamas","sundress","cheongsam","hanfu","gothic lolita","sweater vest","cardigan","denim jacket","raincoat","santa costume","cheerleader","track suit","overalls","trench coat","tuxedo","tank top","turtleneck","poncho","apron dress","qipao","racing outfit","military uniform","police uniform","waitress","barista"],
+    nsfwMild: ["bare shoulders","off shoulder","sleeveless","camisole","crop top","midriff","navel","short shorts","miniskirt","pleated skirt","school uniform","sailor uniform","serafuku","jk uniform","thighhighs","black thighhighs","white thighhighs","pantyhose","bodycon dress","tight dress","one-piece swimsuit","swimsuit","sports bra","tube top","backless dress","halter neck","lace trim","unbuttoned shirt","oversized shirt","white shirt","loose necktie","untied ribbon","apron","looking at viewer","leaning forward","hand on hip","arms behind back","crossed legs","stretching","hair flip","hand in hair","adjusting clothes","pulling skirt","looking back","over shoulder","kneeling","sitting on floor","legs crossed","tiptoe","posing","wink","blush","light blush","parted lips","biting lip","licking lips","seductive smile","half-closed eyes","glancing","shy","flustered","soft smile","slender","slim waist","long legs","beautiful legs","collarbone","nape of neck","beautiful figure","soft lighting","warm lighting","romantic atmosphere","summer","beach","poolside","sunset","rain","wet hair","glistening skin","breeze","wind"],
+    nsfwSoft: ["lingerie","bikini","micro bikini","slingshot swimsuit","swimsuit","see-through","sheer clothing","wet clothes","cleavage","huge cleavage","bare shoulders","midriff","navel","thighhighs","black thighhighs","white thighhighs","panties","side-tie panties","bra","no bra","no panties","camisole","slip","garter belt","miniskirt","underboob","sideboob","downblouse","panty pull","clothes lift","skirt lift","shirt lift","undressing","nipple slip","cameltoe","tight clothes","latex","bunny suit","nsfw"],
+    nsfwBody: ["large breasts","huge breasts","gigantic breasts","medium breasts","small breasts","breasts","hanging breasts","nipples","hard nipples","puffy nipples","inverted nipples","areolae","large areolae","ass","huge ass","wide hips","thick thighs","plump","curvy figure","muscular","abs","spread legs","spread pussy","thigh gap","pubic hair","shaved pussy"],
+    nsfwNude: ["nude","fully nude","completely nude","topless","bottomless","naked","naked apron","no clothes","clothing aside","undressed","half-undressed","disheveled","exposed breasts","exposed pussy","pussy","vagina","penis","erection","testicles"],
+    nsfwPose: ["legs up","legs apart","m legs","on all fours","presenting","bent over","arched back","back arch","top-down bottom-up","legs behind head","legs on shoulders","hip thrust","straddling","riding","lap sitting","carried","suspended","upside down"],
+    nsfwAct: ["sex","vaginal","vaginal sex","penetrative sex","penis in vagina",
+      // ===== 男女体位 =====
+      "missionary","cowgirl position","reverse cowgirl","asian cowgirl","doggy style",
+      "spooning","standing sex","mating press","prone bone","piledriver","full nelson",
+      "suspended congress","wheelbarrow","lotus position","amazon position",
+      "butterfly position","anvil position","pretzel position","cradle position",
+      "eagle position","leg glider","viennese oyster","upright straddle",
+      "kneeling sex","lap sex","sitting sex","side-by-side","face-to-face",
+      "carrying sex","on side","from behind","tabletop",
+      // ===== 插入深度/方式 =====
+      "anal","anal sex","double penetration","spitroast","nipple penetration",
+      "cervix penetration","deep penetration","slow sex","rough sex","gentle sex",
+      // ===== 多人 / 女女 =====
+      "threesome","group sex","orgy","tribadism","scissoring",
+      // ===== 摩擦 =====
+      "dry humping","humping","grinding","pillow humping","thigh rubbing",
+      // ===== 自慰（通用） =====
+      "masturbation","mutual masturbation","fingering","finger in pussy","fisting",
+      "clitoral stimulation","rubbing clitoris","rubbing pussy",
+      // ===== 高潮 =====
+      "orgasm","climax","after orgasm","multiple orgasms","edging","orgasm denial",
+      "overstimulation","squirting","ejaculation"],
+    // 女性自慰方式方法
+    nsfwMast: ["masturbation","fingering","finger in pussy","two fingers","three fingers",
+      "rubbing clitoris","clitoral stimulation","clit rubbing","rubbing pussy","pussy rubbing",
+      "spread pussy","wet pussy","pussy juice",
+      "dildo in pussy","riding dildo","vibrator","wand vibrator","magic wand","egg vibrator",
+      "g-spot vibrator","clit sucker","suction cup dildo",
+      "anal fingering","anal masturbation","anal beads","butt plug",
+      "pillow humping","grinding","thigh rubbing","squeezing thighs","crossed legs",
+      "hand in panties","through panties","under clothes","clothed masturbation",
+      "nipple play","breast massage","nipple stimulation","breast grab","fisting",
+      "orgasm","multiple orgasms","edging","orgasm denial","overstimulation",
+      "squirting","after orgasm","climax","heavy breathing","trembling"],
+    nsfwOral: ["blowjob","fellatio","deepthroat","irrumatio","oral","cunnilingus","licking pussy","sixty-nine","anilingus","tongue in pussy","saliva","mouth hold"],
+    nsfwBreast: ["paizuri","titjob","breast sucking","nipple licking","nipple stimulation","breast grab","breast press","breast smother","motorboating","lactation","milking","milk","nipple pull"],
+    nsfwFluid: ["cum","precum","cum on body","cum on face","cum on breasts","cum on ass","cum on stomach","cum in pussy","cum in mouth","cum in ass","cum overflow","cumdrip","excessive cum","bukkake","facial","creampie","cum string","pussy juice","vaginal fluids","squirting","wet","sweat","glistening skin","messy","drooling"],
+    nsfwFace: ["ahegao","rolling eyes","eye rolling","tongue out","tongue hanging out","open mouth","parted lips","half-closed eyes","seductive smile","lustful","heavy breathing","dazed","blush","deep blush","sweating","tears","crying","fucked silly","mind break","nose blush"],
+    nsfwToy: ["dildo","vibrator","wand vibrator","magic wand","sex toy","anal beads","butt plug","anal plug","onahole","sex machine","nipple clamp","egg vibrator","g-spot vibrator","clit sucker","suction cup dildo","vibrator on clitoris","toy in pussy","multiple toys"],
+    nsfwBond: ["bondage","shibari","rope","bound","bound wrists","bound arms","bound legs","tied up","handcuffs","blindfold","collar","leash","gag","ball gag","restraints","suspension bondage"],
+    nsfwScene: ["on bed","bedroom","love hotel","against wall","on desk","on floor","in shower","in bath","bathroom","on sofa","changing room","public","car","outdoors","night","mirror","in front of mirror","poolside","beach"],
+    pose: ["sitting","standing","lying","leaning forward","looking back","arms behind head","stretching","walking","on knees","cross-legged","hand on hip","lying on back","arms crossed","hands on knees","kneeling","squatting","tiptoe","running","jumping","dancing","hands in pockets","hand on chest","waving","saluting","holding cup","reading book","playing instrument","adjusting hair","hugging pillow","sitting on chair"],
+    expression: ["smile","blush","shy","looking at viewer","closed eyes","smirk","surprised","pout","gentle smile","sleepy","embarrassed","laughing","giggling","serious","determined","confident","wink","crying","angry","confused","thinking","winking","open mouth","seductive smile","dazed"],
+    background: ["bedroom","classroom","street","beach","garden","cityscape","night sky","cafe","onsen","underwater","cherry blossoms","sunset","forest","rooftop","library","beach at dusk","shrine","train station","alley","park","museum","aquarium","concert stage","festival","snow field","desert","mountain","lake","flower field","balcony","kitchen","bathroom","hotel room","swimming pool","school rooftop","autumn leaves","starry sky","ruins","spaceship","cyberpunk city"],
+    lighting: ["cinematic lighting","soft lighting","rim lighting","backlighting","golden hour","dramatic lighting","volumetric lighting","neon lighting","moonlight","lens flare","god rays","candlelight","studio lighting","harsh shadows","dappled sunlight","blue hour","sunrise","firelight","bioluminescence","glowing"],
+    camera: ["full body","upper body","cowboy shot","close-up","from above","from below","from side","dynamic angle","portrait","wide shot","medium shot","dutch angle","over the shoulder","fisheye","from behind","profile","face closeup","low angle","high angle"],
+    preset: {
+      soft:   ["pastel colors","soft colors","petals","gentle light","dreamy atmosphere","floating particles"],
+      dark:   ["dark theme","gothic","night","dark atmosphere","moon","purple theme","black dress"],
+      cute:   ["chibi","cute","kawaii","sparkles","soft smile","pastel"],
+      painterly: ["painting (medium)","oil painting","thick brushstrokes","artistic","colorful"]
+    }
+  };
+
+  const NEG_BASE = ["lowres","bad anatomy","bad hands","missing fingers","extra digits","fewer digits","worst quality","low quality","jpeg artifacts","watermark","signature","blurry","deformed","disfigured","bad proportions","extra arms","extra legs","cropped","long neck","mutated hands"];
+  const NEG_EXTRA = ["duplicate","error","extra limb","out of frame","poorly drawn face","poorly drawn hands","malformed"];
+
+  // ===== 中英对照词典 =====
+  const CN = {
+    "1girl":"一个女孩","1girl, solo":"一个女孩，单人","8k wallpaper":"8K壁纸","abs":"腹肌","absurdres":"超高分辨率",
+    "adjusting clothes":"整理衣服","adjusting hair":"撩头发","after orgasm":"高潮后","against wall":"靠墙","ahegao":"阿黑颜",
+    "alley":"小巷","amazing quality":"极佳画质","amazon position":"亚马逊体位","anal":"肛门性交","anal beads":"肛珠","anal plug":"肛门塞","anal sex":"肛交",
+    "angry":"生气","anilingus":"舔肛","anime coloring":"动漫上色","anime screencap":"动画截图风","anime style":"动漫风格",
+    "apron":"围裙","apron dress":"围裙连衣裙","aqua eyes":"水蓝色眼睛","aquarium":"水族馆","arched back":"弓背","areolae":"乳晕",
+    "armor":"铠甲","arms behind back":"双手背后","arms behind head":"双手抱头","arms crossed":"抱臂","artistic":"艺术感","ass":"臀部",
+    "athletic":"运动型","autumn leaves":"秋叶","back arch":"背部弓起","backless dress":"露背裙","backlighting":"逆光","balcony":"阳台",
+    "ball gag":"口球","bare shoulders":"露肩","barista":"咖啡师","bathroom":"浴室","beach":"海滩","beach at dusk":"黄昏海滩",
+    "beautiful detailed eyes":"精致美丽的眼睛","beautiful figure":"好身材","beautiful legs":"美腿","bedroom":"卧室","bent over":"弯腰",
+    "best quality":"最佳质量","bikini":"比基尼","bioluminescence":"生物荧光","biting lip":"咬唇","black dress":"黑裙","black hair":"黑发",
+    "black thighhighs":"黑色过膝袜","blindfold":"眼罩","blonde hair":"金发","blowjob":"口交","blue eyes":"蓝眼睛","blue hair":"蓝发",
+    "blue hour":"蓝调时刻","blush":"脸红","bob cut":"波波头","bodycon dress":"紧身包臀裙","bondage":"束缚","bottomless":"下空",
+    "bound":"被绑","bound arms":"双臂被绑","bound legs":"双腿被绑","bound wrists":"手腕被绑","bra":"胸罩","braid":"麻花辫",
+    "breast grab":"抓胸","breast press":"夹胸","breast smother":"埋胸挤压","breast sucking":"吸吮胸部","breasts":"胸部","breeze":"微风",
+    "brown eyes":"棕色眼睛","brown hair":"棕发","bukkake":"大量颜射","bunny suit":"兔女郎装","butt plug":"肛塞","cafe":"咖啡馆",
+    "cameltoe":"骆驼趾","camisole":"吊带背心","candlelight":"烛光","car":"车内","cardigan":"开衫","carried":"被抱起",
+    "casual":"休闲装","changing room":"更衣室","cheerleader":"啦啦队","cheongsam":"旗袍","cherry blossoms":"樱花","chibi":"Q版",
+    "cinematic lighting":"电影级光照","cityscape":"城市景观","classroom":"教室","cleavage":"乳沟","climax":"达到高潮","close-up":"特写",
+    "closed eyes":"闭眼","clothes lift":"掀起衣服","clothing aside":"衣服拨到一边","collar":"项圈","collarbone":"锁骨","colorful":"色彩丰富",
+    "completely nude":"一丝不挂","concert stage":"演唱会舞台","confident":"自信","confused":"困惑","cowboy shot":"七分身构图",
+    "cowgirl position":"骑乘位","creampie":"中出","crop top":"露脐上衣","cross-legged":"盘腿","crossed legs":"翘腿","crying":"哭泣",
+    "cum":"精液","cum in ass":"射在臀内","cum in mouth":"射在口中","cum in pussy":"内射","cum on ass":"射在臀部","cum on body":"射在身上",
+    "cum on breasts":"射在胸部","cum on face":"颜射","cum on stomach":"射在腹部","cum overflow":"精液溢出","cum string":"精液拉丝",
+    "cumdrip":"精液滴落","cunnilingus":"口交阴部","curvy":"曲线优美","curvy figure":"曲线身材","cute":"可爱","cyberpunk city":"赛博朋克城市",
+    "dancing":"跳舞","dappled sunlight":"斑驳阳光","dark atmosphere":"暗色氛围","dark theme":"暗黑主题","dazed":"恍惚","deep blush":"重度脸红",
+    "deepthroat":"深喉","delicate illustration":"精致插画","denim jacket":"牛仔外套","desert":"沙漠","detailed background":"精细背景",
+    "determined":"坚定","dildo":"假阳具","disheveled":"衣衫凌乱","doggy style":"后入式","double penetration":"双插","downblouse":"俯视走光",
+    "dramatic lighting":"戏剧性光照","dreamy atmosphere":"梦幻氛围","dress":"连衣裙","drooling":"流口水","dry humping":"隔衣摩擦",
+    "dutch angle":"荷兰角","dynamic angle":"动态角度","egg vibrator":"跳蛋","ejaculation":"射精","embarrassed":"难为情","erection":"勃起",
+    "excessive cum":"大量精液","exposed breasts":"露出胸部","exposed pussy":"露出私处","extremely detailed CG":"极致细节CG",
+    "eye rolling":"翻白眼","face closeup":"脸部特写","facial":"面部射精","fellatio":"吸吮阴茎","festival":"祭典","finger in pussy":"手指插入",
+    "fingering":"手指爱抚","firelight":"火光","fisheye":"鱼眼镜头","fisting":"拳交","floating particles":"漂浮粒子","flower field":"花田",
+    "flustered":"慌乱","forest":"森林","from above":"俯视","from behind":"背面视角","from below":"仰视","from side":"侧面视角",
+    "fucked silly":"被干到失神","full body":"全身","full nelson":"全身固定位","fully nude":"全裸","gag":"口塞","garden":"花园",
+    "garter belt":"吊袜带","gentle light":"柔和光线","gentle smile":"温柔微笑","gigantic breasts":"超大胸","giggling":"咯咯笑",
+    "glancing":"瞟视","glistening skin":"肌肤湿润发光","glowing":"发光","god rays":"耶稣光","golden hour":"黄金时刻","gothic":"哥特",
+    "gothic lolita":"哥特萝莉装","gradient hair":"渐变发色","green eyes":"绿眼睛","green hair":"绿发","group sex":"群交",
+    "hair bun":"丸子头","hair flip":"甩发","half-closed eyes":"半睁眼","half-undressed":"半脱衣","halter neck":"挂脖式",
+    "hand in hair":"手插头发","hand on chest":"手放胸前","hand on hip":"手叉腰","handcuffs":"手铐","hands in pockets":"双手插兜",
+    "hands on knees":"双手放膝","hanfu":"汉服","hanging breasts":"下垂胸","hard nipples":"硬挺乳头","harsh shadows":"强烈阴影",
+    "heavy breathing":"粗喘","heterochromia":"异色瞳","high angle":"高角度","highres":"高分辨率","hime cut":"公主切","hip thrust":"顶胯",
+    "holding cup":"手持杯子","hoodie":"连帽衫","hotel room":"酒店房间","huge ass":"巨臀","huge breasts":"巨乳","huge cleavage":"深乳沟",
+    "hugging pillow":"抱枕头","idol costume":"偶像装","in bath":"泡澡","in front of mirror":"镜前","in shower":"淋浴",
+    "inverted nipples":"凹陷乳头","irrumatio":"主动抽插口交","jk uniform":"JK制服","jumping":"跳跃","kawaii":"卡哇伊","kimono":"和服",
+    "kitchen":"厨房","kneeling":"跪姿","lace trim":"蕾丝花边","lactation":"泌乳","lake":"湖畔","lap sitting":"坐在腿上",
+    "large areolae":"大乳晕","large breasts":"大胸","latex":"乳胶衣","laughing":"大笑","leaning forward":"前倾","leash":"牵引绳",
+    "legs apart":"双腿分开","legs behind head":"双腿过头","legs crossed":"双腿交叠","legs on shoulders":"双腿搭肩","legs up":"抬腿",
+    "lens flare":"镜头光晕","library":"图书馆","licking lips":"舔唇","licking pussy":"舔阴","light blush":"微红","lingerie":"内衣",
+    "long hair":"长发","long legs":"长腿","looking at viewer":"看向镜头","looking back":"回头看","loose necktie":"松领带",
+    "lotus position":"莲花位","love hotel":"情侣酒店","low angle":"低角度","lustful":"情欲","lying":"躺卧","lying on back":"仰卧",
+    "m legs":"M字腿","magic wand":"魔法棒","maid outfit":"女仆装","masterpiece":"杰作","masturbation":"自慰","mating press":"屈曲位",
+    "mature":"成熟","medium breasts":"中等胸","medium shot":"中景","messy":"凌乱","micro bikini":"微型比基尼","midriff":"露腰",
+    "military uniform":"军装","milk":"乳汁","milking":"挤奶","mind break":"精神崩溃","miniskirt":"迷你裙","mirror":"镜子",
+    "missionary":"正常位","moon":"月亮","moonlight":"月光","motorboating":"埋胸","mountain":"山景","mouth hold":"口含",
+    "muscular":"肌肉型","museum":"博物馆","mutual masturbation":"互相自慰","naked":"赤裸","naked apron":"裸围裙","nape of neck":"后颈",
+    "navel":"肚脐","neon lighting":"霓虹光","night":"夜晚","night sky":"夜空","nipple clamp":"乳夹","nipple licking":"舔乳",
+    "nipple pull":"拉乳头","nipple slip":"走光露点","nipple stimulation":"刺激乳头","nipples":"乳头","no bra":"没穿胸罩",
+    "no clothes":"没穿衣服","no panties":"没穿内裤","nose blush":"鼻尖泛红","nsfw":"成人内容","nude":"裸体","nurse uniform":"护士服",
+    "off shoulder":"露肩装","official art":"官方画风","oil painting":"油画","on all fours":"四肢着地","on bed":"床上","on desk":"桌上",
+    "on floor":"地上","on knees":"跪着","on sofa":"沙发上","onahole":"飞机杯","one-piece swimsuit":"连体泳衣","onsen":"温泉",
+    "open mouth":"张嘴","oral":"口部性行为","orgasm":"高潮","orgy":"淫乱派对","outdoors":"户外","over shoulder":"回头肩视",
+    "over the shoulder":"过肩视角","overalls":"背带裤","oversized shirt":"宽大衬衫","painting (medium)":"绘画媒介","paizuri":"胸交",
+    "pajamas":"睡衣","panties":"内裤","panty pull":"拉内裤","pantyhose":"连裤袜","park":"公园","parted lips":"微张嘴唇",
+    "pastel":"粉彩色","pastel colors":"粉彩配色","penetrative sex":"插入式性交","penis":"阴茎","penis in vagina":"阴茎插入",
+    "petals":"花瓣","petite":"娇小","piledriver":"倒立位","pink eyes":"粉色眼睛","pink hair":"粉发","playing instrument":"演奏乐器",
+    "pleated skirt":"百褶裙","plump":"丰满","police uniform":"警服","poncho":"斗篷","ponytail":"马尾","poolside":"泳池边",
+    "portrait":"肖像构图","posing":"摆姿势","pout":"嘟嘴","precum":"前列腺液","presenting":"展示姿势","profile":"侧脸",
+    "prone bone":"趴卧位","pubic hair":"阴毛","public":"公共场所","puffy nipples":"肿胀乳头","pulling skirt":"拉裙子",
+    "purple eyes":"紫眼睛","purple hair":"紫发","purple theme":"紫色主题","pussy":"私处","pussy juice":"爱液","qipao":"旗袍",
+    "racing outfit":"赛车服","rain":"雨","raincoat":"雨衣","reading book":"看书","red eyes":"红眼睛","red hair":"红发",
+    "restraints":"拘束具","reverse cowgirl":"反向骑乘位","riding":"骑乘","rim lighting":"轮廓光","rolling eyes":"眼珠上翻",
+    "romantic atmosphere":"浪漫氛围","rooftop":"天台","rope":"绳索","ruins":"废墟","running":"奔跑","sailor outfit":"水手服",
+    "sailor uniform":"水手制服","saliva":"唾液","saluting":"敬礼","santa costume":"圣诞装","school rooftop":"学校天台",
+    "school uniform":"校服","scissoring":"女女摩擦","seductive smile":"诱惑微笑","see-through":"透视","serafuku":"日式水手服",
+    "serious":"严肃","sex":"性交","sex machine":"性爱机器","sex toy":"性玩具","sharp focus":"锐利对焦","shaved pussy":"剃毛私处",
+    "sheer clothing":"薄透衣物","shibari":"绳缚","shirt lift":"掀起衬衫","short hair":"短发","short shorts":"短裤","shrine":"神社",
+    "shy":"害羞","side-tie panties":"侧系带内裤","sideboob":"侧乳","silver hair":"银发","sitting":"坐姿","sitting on chair":"坐椅子",
+    "sitting on floor":"坐地上","sixty-nine":"69式","skirt lift":"掀起裙子","sleepy":"困倦","sleeveless":"无袖","slender":"纤细",
+    "slim":"苗条","slim waist":"细腰","slingshot swimsuit":"弹弓泳衣","slip":"衬裙","small breasts":"小胸","smile":"微笑",
+    "smirk":"坏笑","snow field":"雪原","soft colors":"柔和配色","soft lighting":"柔和光照","soft smile":"柔和微笑","solo":"单人",
+    "spaceship":"宇宙飞船","sparkles":"闪光","spitroast":"前后夹击","spooning":"侧卧位","sports bra":"运动内衣",
+    "spread legs":"张开双腿","spread pussy":"掰开私处","squatting":"蹲姿","squirting":"潮吹","standing":"站姿","standing sex":"站立性交",
+    "starry sky":"星空","straddling":"跨坐","straight hair":"直发","street":"街道","stretching":"伸展","studio lighting":"影棚灯光",
+    "suit":"西装","summer":"夏天","sundress":"太阳裙","sunrise":"日出","sunset":"日落","surprised":"惊讶","suspended":"悬吊",
+    "suspended congress":"悬吊性交","suspension bondage":"悬吊束缚","sweat":"汗水","sweater":"毛衣","sweater vest":"毛衣背心",
+    "sweating":"出汗","swimming pool":"游泳池","swimsuit":"泳装","t-shirt":"T恤","tank top":"背心","tears":"泪水","testicles":"睾丸",
+    "thick brushstrokes":"厚涂笔触","thick thighs":"粗大腿","thigh gap":"大腿缝","thighhighs":"过膝袜","thinking":"思考",
+    "threesome":"三人行","tied up":"被绑住","tight clothes":"紧身衣","tight dress":"紧身裙","tiptoe":"踮脚","titjob":"乳交",
+    "tongue hanging out":"伸出舌头","tongue in pussy":"舌入私处","tongue out":"吐舌","top-down bottom-up":"俯卧抬臀","topless":"上空",
+    "track suit":"运动服","train station":"火车站","trench coat":"风衣","tribadism":"女女磨蹭","tube top":"抹胸","turtleneck":"高领",
+    "tuxedo":"燕尾服","twin tails":"双马尾","ultra-detailed":"超精细","unbuttoned shirt":"解开衬衫","underboob":"下乳",
+    "underwater":"水下","undressed":"已脱衣","undressing":"宽衣","untied ribbon":"散开的丝带","upper body":"上半身","upside down":"倒立",
+    "vagina":"阴道","vaginal":"阴道交合","vaginal fluids":"阴道分泌物","vaginal sex":"阴道性交","very aesthetic":"极具美感",
+    "vibrator":"振动棒","volumetric lighting":"体积光","waitress":"女服务员","walking":"走路","wand vibrator":"电动按摩棒",
+    "warm lighting":"暖色光照","waving":"挥手","wavy hair":"卷发","wet":"湿润","wet clothes":"湿身","wet hair":"湿发",
+    "wheelbarrow":"推车位","white hair":"白发","white shirt":"白衬衫","white thighhighs":"白色过膝袜","wide hips":"宽胯",
+    "wide shot":"远景","wind":"风","wink":"眨眼","winking":"眨眼示意","witch costume":"女巫装","yellow eyes":"黄眼睛","yukata":"浴衣",
+    "lowres":"低分辨率","bad anatomy":"人体结构崩坏","bad hands":"手部崩坏","missing fingers":"缺少手指","extra digits":"多余指头",
+    "fewer digits":"手指过少","worst quality":"最差质量","low quality":"低质量","jpeg artifacts":"JPEG噪点","watermark":"水印",
+    "signature":"签名","blurry":"模糊","deformed":"畸形","disfigured":"面容扭曲","bad proportions":"比例失调","extra arms":"多余手臂",
+    "extra legs":"多余腿","cropped":"被裁切","long neck":"长脖子","mutated hands":"变异的手","duplicate":"重复","error":"错误",
+    "extra limb":"多余肢体","out of frame":"出框","poorly drawn face":"脸部画得差","poorly drawn hands":"手部画得差","malformed":"形态异常",
+    "red ribbon":"红色丝带","torii":"鸟居","headphones":"耳机","jacket":"夹克","hospital":"医院","syringe":"注射器",
+    "clinical":"临床冷调","present":"礼物","towel":"毛巾","steam":"蒸汽","wooden bucket":"木桶","microphone":"麦克风",
+    "stage lights":"舞台灯","sword":"剑","battlefield":"战场","cape":"披风","fireworks":"烟花","paper lantern":"纸灯笼","geta":"木屐",
+    "2girls":"两个女孩","multiple girls":"多个女孩","relaxed":"放松",
+    // ===== 男女体位（扩充）=====
+    "asian cowgirl":"蹲坐骑乘","butterfly position":"蝴蝶体位","anvil position":"铁砧体位",
+    "pretzel position":"椒盐卷饼体位","cradle position":"摇篮体位","eagle position":"雄鹰体位",
+    "leg glider":"抬腿侧入","viennese oyster":"维也纳牡蛎","upright straddle":"直立跨坐",
+    "kneeling sex":"跪姿性交","lap sex":"腿上性交","sitting sex":"坐姿性交",
+    "side-by-side":"并排侧卧","face-to-face":"面对面","carrying sex":"抱起性交",
+    "on side":"侧躺","from behind":"从背后","tabletop":"桌面体位",
+    "nipple penetration":"乳头插入","cervix penetration":"顶到子宫","deep penetration":"深度插入",
+    "slow sex":"缓慢性交","rough sex":"激烈性交","gentle sex":"温柔性交",
+    // ===== 女性自慰 =====
+    "two fingers":"两根手指","three fingers":"三根手指",
+    "rubbing clitoris":"揉搓阴蒂","clitoral stimulation":"刺激阴蒂","clit rubbing":"摩擦阴蒂",
+    "rubbing pussy":"揉搓私处","pussy rubbing":"抚摸私处","wet pussy":"湿润私处",
+    "dildo in pussy":"假阳具插入","riding dildo":"骑假阳具",
+    "g-spot vibrator":"G点震动棒","clit sucker":"吸阴蒂器","suction cup dildo":"吸盘假阳具",
+    "vibrator on clitoris":"震动棒贴阴蒂","toy in pussy":"道具插入","multiple toys":"多个道具",
+    "anal fingering":"后庭手指","anal masturbation":"后庭自慰",
+    "pillow humping":"骑枕头","humping":"蹭弄","grinding":"磨蹭","thigh rubbing":"夹腿摩擦",
+    "squeezing thighs":"夹紧大腿","hand in panties":"手伸进内裤","through panties":"隔着内裤",
+    "under clothes":"衣服底下","clothed masturbation":"隔着衣服自慰",
+    "nipple play":"玩弄乳头","breast massage":"揉胸",
+    "multiple orgasms":"多次高潮","edging":"寸止","orgasm denial":"禁止高潮",
+    "overstimulation":"过度刺激","trembling":"颤抖"
+  };
+
+  // ===== 场景预设包 =====
+  const SCENES = {
+    jk:      { n: "校园JK",   t: ["school uniform","pleated skirt","black thighhighs","classroom","cherry blossoms","looking at viewer"] },
+    maid:    { n: "女仆咖啡", t: ["maid outfit","apron","lace trim","cafe","holding cup","gentle smile"] },
+    miko:    { n: "和风巫女", t: ["kimono","shrine","red ribbon","autumn leaves","torii"] },
+    cyber:   { n: "赛博朋克", t: ["cyberpunk city","neon lighting","night","headphones","jacket","glowing"] },
+    summer:  { n: "泳装夏日", t: ["swimsuit","beach","sunset","summer","wet hair","poolside"] },
+    gothic:  { n: "暗黑哥特", t: ["gothic lolita","black dress","candlelight","ruins","dark theme","lace trim"] },
+    nurse:   { n: "护士",     t: ["nurse uniform","white thighhighs","hospital","syringe","clinical"] },
+    santa:   { n: "圣诞",     t: ["santa costume","snow field","red ribbon","night","present"] },
+    onsen:   { n: "温泉",     t: ["onsen","towel","steam","wooden bucket","autumn leaves"] },
+    idol:    { n: "偶像舞台", t: ["idol costume","concert stage","microphone","stage lights","sparkles"] },
+    battle:  { n: "战斗少女", t: ["armor","sword","battlefield","cape","determined","dynamic angle"] },
+    matsuri: { n: "祭典浴衣", t: ["yukata","festival","fireworks","paper lantern","geta"] }
+  };
+  let activeScene = "none";
+
+  // ===== NSFW 场景逻辑模板 =====
+  // 每个场景 = 一个连贯情境：单一行为 + 匹配的姿势/表情/体位/镜头
+  // min = 需要的最低强度档；people = 主体人数
+  const SCENARIOS = [
+    // ---------- 甜辣 · 平台过审向 ----------
+    { id:"swim_beach", name:"泳装海滩", min:"mild", people:1,
+      core:["swimsuit","beach"], body:["cleavage","bare shoulders","navel","wet hair"],
+      pose:["standing","looking back","hand on hip","stretching"], face:["smile","winking","blush","glancing"],
+      fluid:[], cam:["full body","cowboy shot"], loc:["beach","poolside"], light:["sunset","golden hour"] },
+    { id:"jk_class", name:"JK教室", min:"mild", people:1,
+      core:["school uniform","pleated skirt","classroom"], body:["thighhighs","black thighhighs","midriff"],
+      pose:["sitting on chair","crossed legs","leaning forward","sitting"], face:["soft smile","shy","glancing","light blush"],
+      fluid:[], cam:["cowboy shot","full body"], loc:["classroom","school rooftop"], light:["soft lighting","dappled sunlight"] },
+    { id:"lingerie_bed", name:"内衣床上", min:"mild", people:1,
+      core:["lingerie","on bed"], body:["cleavage","bare shoulders","thighhighs","garter belt"],
+      pose:["lying","lying on back","on knees","stretching"], face:["blush","seductive smile","half-closed eyes","parted lips"],
+      fluid:[], cam:["full body","from above"], loc:["bedroom","love hotel"], light:["soft lighting","warm lighting"] },
+    { id:"wet_shirt", name:"湿身衬衫", min:"mild", people:1,
+      core:["white shirt","wet","see-through"], body:["no bra","cleavage","midriff"],
+      pose:["standing","leaning forward","hand in hair","adjusting clothes"], face:["flustered","parted lips","blush","embarrassed"],
+      fluid:[], cam:["cowboy shot","upper body"], loc:["bathroom","changing room","rain"], light:["rim lighting","soft lighting"] },
+    { id:"gym_stretch", name:"运动伸展", min:"mild", people:1,
+      core:["sports bra","track suit"], body:["midriff","navel","thick thighs","athletic"],
+      pose:["stretching","arms behind head","tiptoe","sitting"], face:["determined","sweating","looking at viewer","confident"],
+      fluid:[], cam:["full body","dynamic angle"], loc:["park","outdoors"], light:["studio lighting","sunrise"] },
+
+    // ---------- 轻度 · 擦边挑逗 ----------
+    { id:"bikini_pool", name:"比基尼泳池", min:"soft", people:1,
+      core:["bikini","poolside"], body:["sideboob","underboob","cleavage","wet"],
+      pose:["standing","leaning forward","arms behind back","tiptoe"], face:["smirk","blush","looking at viewer","winking"],
+      fluid:[], cam:["full body","low angle"], loc:["poolside","beach"], light:["golden hour","lens flare"] },
+    { id:"strip_tease", name:"脱衣挑逗", min:"soft", people:1,
+      core:["undressing","no bra"], body:["bra","panties","disheveled","half-undressed"],
+      pose:["standing","clothes lift","skirt lift","pulling skirt"], face:["embarrassed","deep blush","parted lips","glancing"],
+      fluid:[], cam:["full body","cowboy shot"], loc:["bedroom","changing room"], light:["soft lighting","warm lighting"] },
+    { id:"topless_cover", name:"半裸遮掩", min:"soft", people:1,
+      core:["topless","nipple slip"], body:["breasts","nipples","bare shoulders","cleavage"],
+      pose:["sitting","arms behind back","kneeling","crossed legs"], face:["shy","flustered","deep blush","half-closed eyes"],
+      fluid:[], cam:["upper body","cowboy shot"], loc:["bedroom","on bed"], light:["soft lighting","rim lighting"] },
+    { id:"stocking_tease", name:"丝袜诱惑", min:"soft", people:1,
+      core:["black thighhighs","garter belt"], body:["thick thighs","thigh gap","ass","underboob"],
+      pose:["kneeling","on all fours","lying on back","presenting"], face:["seductive smile","lustful","blush","parted lips"],
+      fluid:[], cam:["from below","close-up"], loc:["on bed","bedroom"], light:["rim lighting","moonlight"] },
+    { id:"onsen_towel", name:"温泉浴巾", min:"soft", people:1,
+      core:["onsen","towel","steam"], body:["bare shoulders","collarbone","wet hair","cleavage"],
+      pose:["sitting","kneeling","looking back","stretching"], face:["closed eyes","soft smile","blush","sleepy"],
+      fluid:["sweat"], cam:["cowboy shot","from side"], loc:["onsen","in bath"], light:["soft lighting","warm lighting"] },
+
+    // ---------- 中度 · 裸露 ----------
+    { id:"nude_standing", name:"全裸站姿", min:"medium", people:1,
+      core:["nude","standing"], body:["breasts","nipples","wide hips","thick thighs"],
+      pose:["standing","hand on hip","arms behind back","leaning forward"], face:["seductive smile","blush","looking at viewer","parted lips"],
+      fluid:[], cam:["full body","cowboy shot"], loc:["bedroom","in front of mirror"], light:["soft lighting","rim lighting"] },
+    { id:"nude_lying", name:"全裸躺姿", min:"medium", people:1,
+      core:["completely nude","lying on back"], body:["breasts","nipples","areolae","thigh gap","shaved pussy"],
+      pose:["lying","legs apart","stretching","arms behind head"], face:["half-closed eyes","blush","seductive smile","lustful"],
+      fluid:[], cam:["from above","full body"], loc:["on bed","bedroom"], light:["soft lighting","warm lighting"] },
+    { id:"nude_allfours", name:"全裸趴姿", min:"medium", people:1,
+      core:["nude","on all fours"], body:["ass","breasts","nipples","arched back"],
+      pose:["on all fours","presenting","top-down bottom-up","bent over"], face:["looking back","blush","parted lips","lustful"],
+      fluid:[], cam:["from behind","full body"], loc:["on bed","bedroom"], light:["rim lighting","soft lighting"] },
+    { id:"nude_shower", name:"淋浴全裸", min:"medium", people:1,
+      core:["nude","in shower"], body:["wet","nipples","glistening skin","collarbone"],
+      pose:["standing","hand in hair","leaning forward","looking back"], face:["closed eyes","parted lips","blush","dazed"],
+      fluid:["wet"], cam:["cowboy shot","from side"], loc:["in shower","bathroom"], light:["rim lighting","volumetric lighting"] },
+    { id:"nude_mirror", name:"镜前全裸", min:"medium", people:1,
+      core:["nude","in front of mirror"], body:["ass","breasts","wide hips","thick thighs"],
+      pose:["standing","looking back","over shoulder","presenting"], face:["seductive smile","blush","looking at viewer","half-closed eyes"],
+      fluid:[], cam:["from behind","full body"], loc:["in front of mirror","bedroom"], light:["soft lighting","moonlight"] },
+
+    // ---------- 重度 · 单一性行为 ----------
+    { id:"fellatio", name:"口交", min:"explicit", people:1,
+      core:["fellatio","penis"], body:["breasts","nipples","cleavage"],
+      pose:["kneeling","on knees","leaning forward"], face:["open mouth","blush","looking at viewer","half-closed eyes"],
+      fluid:["saliva","precum"], cam:["close-up","upper body"], loc:["on bed","bedroom"], light:["soft lighting","warm lighting"] },
+    { id:"paizuri", name:"乳交", min:"explicit", people:1,
+      core:["paizuri","penis"], body:["large breasts","nipples","areolae"],
+      pose:["kneeling","sitting","leaning forward"], face:["looking at viewer","blush","parted lips","seductive smile"],
+      fluid:["precum"], cam:["close-up","upper body"], loc:["on bed","bedroom"], light:["soft lighting","rim lighting"] },
+    { id:"cowgirl", name:"骑乘位", min:"explicit", people:1,
+      core:["cowgirl position","sex"], body:["breasts","nipples","wide hips","thick thighs"],
+      pose:["straddling","riding","hip thrust","lap sitting"], face:["ahegao","blush","open mouth","lustful"],
+      fluid:["sweat"], cam:["from above","cowboy shot"], loc:["on bed","bedroom"], light:["warm lighting","rim lighting"] },
+    { id:"missionary", name:"正常位", min:"explicit", people:1,
+      core:["missionary","sex"], body:["breasts","nipples","thigh gap"],
+      pose:["lying on back","legs apart","legs on shoulders","m legs"], face:["blush","half-closed eyes","open mouth","lustful"],
+      fluid:["sweat"], cam:["from above","full body"], loc:["on bed","bedroom"], light:["soft lighting","warm lighting"] },
+    { id:"doggy", name:"后入位", min:"explicit", people:1,
+      core:["doggy style","sex"], body:["ass","breasts","arched back"],
+      pose:["on all fours","bent over","presenting","hip thrust"], face:["looking back","blush","open mouth","dazed"],
+      fluid:["sweat"], cam:["from behind","full body"], loc:["on bed","bedroom"], light:["rim lighting","warm lighting"] },
+    { id:"masturbation", name:"自慰", min:"explicit", people:1,
+      core:["masturbation","fingering"], body:["spread legs","pussy","nipples","thigh gap"],
+      pose:["lying on back","legs apart","m legs","spread legs"], face:["ahegao","half-closed eyes","blush","open mouth"],
+      fluid:["pussy juice","sweat"], cam:["from above","close-up"], loc:["on bed","bedroom"], light:["soft lighting","moonlight"] },
+    { id:"cunnilingus", name:"舔阴", min:"explicit", people:2,
+      core:["cunnilingus","pussy"], body:["thigh gap","breasts","long legs"],
+      pose:["legs apart","m legs","lying on back","spread legs"], face:["ahegao","blush","open mouth","lustful"],
+      fluid:["pussy juice","saliva"], cam:["close-up","from above"], loc:["on bed","bedroom"], light:["warm lighting","soft lighting"] },
+    { id:"sixtynine", name:"69式", min:"explicit", people:2,
+      core:["sixty-nine","fellatio"], body:["ass","thick thighs","breasts"],
+      pose:["lying","on all fours","legs apart"], face:["open mouth","blush","half-closed eyes"],
+      fluid:["saliva","pussy juice"], cam:["from side","full body"], loc:["on bed","bedroom"], light:["warm lighting","rim lighting"] },
+    { id:"mating_press", name:"屈曲位", min:"explicit", people:1,
+      core:["mating press","sex"], body:["breasts","nipples","thick thighs","wide hips"],
+      pose:["legs up","legs behind head","lying on back","legs on shoulders"], face:["ahegao","mind break","blush","open mouth"],
+      fluid:["sweat","drooling"], cam:["from above","close-up"], loc:["on bed","bedroom"], light:["dramatic lighting","warm lighting"] },
+    { id:"prone_bone", name:"趴卧位", min:"explicit", people:1,
+      core:["prone bone","sex"], body:["ass","breasts","wide hips"],
+      pose:["lying","legs apart","on all fours","hip thrust"], face:["looking back","blush","dazed","open mouth"],
+      fluid:["sweat"], cam:["from above","from behind"], loc:["on bed","bedroom"], light:["soft lighting","rim lighting"] },
+    { id:"wall_standing", name:"站立贴墙", min:"explicit", people:1,
+      core:["standing sex","against wall"], body:["breasts","nipples","thick thighs","long legs"],
+      pose:["standing","legs up","carried","straddling"], face:["blush","open mouth","lustful","half-closed eyes"],
+      fluid:["sweat"], cam:["full body","from below"], loc:["against wall","bedroom"], light:["dramatic lighting","rim lighting"] },
+
+    // ---------- 男女体位（扩充） ----------
+    { id:"reverse_cowgirl", name:"反向骑乘", min:"explicit", people:1,
+      core:["reverse cowgirl","sex"], body:["ass","wide hips","thick thighs","breasts"],
+      pose:["straddling","riding","hip thrust","on all fours"], face:["looking back","blush","open mouth","lustful"],
+      fluid:["sweat"], cam:["from behind","full body"], loc:["on bed","bedroom"], light:["warm lighting","rim lighting"] },
+    { id:"spooning", name:"侧卧位", min:"explicit", people:1,
+      core:["spooning","sex"], body:["breasts","nipples","wide hips","thick thighs"],
+      pose:["lying","legs apart","arched back","hip thrust"], face:["half-closed eyes","blush","lustful","parted lips"],
+      fluid:["sweat"], cam:["from side","full body"], loc:["on bed","bedroom"], light:["soft lighting","warm lighting"] },
+    { id:"lotus", name:"观音坐莲", min:"explicit", people:1,
+      core:["lotus position","sex"], body:["breasts","nipples","wide hips","thick thighs"],
+      pose:["lap sitting","straddling","sitting","hip thrust"], face:["blush","lustful","open mouth","half-closed eyes"],
+      fluid:["sweat"], cam:["cowboy shot","upper body"], loc:["on bed","bedroom"], light:["warm lighting","candlelight"] },
+    { id:"kneeling_sex", name:"跪姿后入", min:"explicit", people:1,
+      core:["kneeling sex","sex"], body:["ass","breasts","arched back","wide hips"],
+      pose:["on all fours","kneeling","bent over","hip thrust"], face:["looking back","blush","open mouth","ahegao"],
+      fluid:["sweat"], cam:["from behind","full body"], loc:["on bed","on sofa"], light:["warm lighting","rim lighting"] },
+    { id:"car_sex", name:"车内", min:"explicit", people:1,
+      core:["sitting sex","sex"], body:["breasts","thick thighs","wide hips","nipples"],
+      pose:["lap sitting","straddling","sitting","riding"], face:["blush","lustful","open mouth","half-closed eyes"],
+      fluid:["sweat"], cam:["cowboy shot","from side"], loc:["car","night"], light:["neon lighting","dramatic lighting"] },
+    { id:"shower_sex", name:"浴室站立", min:"explicit", people:1,
+      core:["standing sex","sex"], body:["wet","glistening skin","breasts","thick thighs"],
+      pose:["standing","legs up","leaning forward","hip thrust"], face:["closed eyes","open mouth","blush","dazed"],
+      fluid:["wet","sweat"], cam:["cowboy shot","from side"], loc:["in shower","bathroom"], light:["rim lighting","volumetric lighting"] },
+    { id:"outdoor_sex", name:"野外", min:"explicit", people:1,
+      core:["standing sex","sex"], body:["breasts","thick thighs","wide hips","nipples"],
+      pose:["standing","bent over","on all fours","legs up"], face:["blush","open mouth","lustful","embarrassed"],
+      fluid:["sweat"], cam:["full body","dynamic angle"], loc:["outdoors","night"], light:["moonlight","rim lighting"] },
+    { id:"piledriver", name:"打桩机", min:"extreme", people:1,
+      core:["piledriver","sex"], body:["breasts","nipples","wide hips","thick thighs"],
+      pose:["upside down","legs up","legs on shoulders","hip thrust"], face:["ahegao","mind break","blush","open mouth"],
+      fluid:["sweat","drooling"], cam:["from above","full body"], loc:["on bed","bedroom"], light:["dramatic lighting","warm lighting"] },
+    { id:"full_nelson", name:"全身锁", min:"extreme", people:1,
+      core:["full nelson","sex"], body:["breasts","nipples","spread legs","thick thighs"],
+      pose:["legs up","carried","straddling","hip thrust"], face:["ahegao","rolling eyes","open mouth","blush"],
+      fluid:["sweat","drooling"], cam:["close-up","from above"], loc:["on bed","bedroom"], light:["dramatic lighting","warm lighting"] },
+    { id:"suspended", name:"站立抱起", min:"extreme", people:1,
+      core:["suspended congress","sex"], body:["thick thighs","long legs","breasts","wide hips"],
+      pose:["carried","suspended","straddling","legs up"], face:["blush","open mouth","lustful","dazed"],
+      fluid:["sweat"], cam:["full body","low angle"], loc:["against wall","bedroom"], light:["dramatic lighting","rim lighting"] },
+    { id:"carrying_sex", name:"抱起位", min:"extreme", people:1,
+      core:["carrying sex","sex"], body:["thick thighs","long legs","breasts","ass"],
+      pose:["carried","standing","straddling","hip thrust"], face:["blush","open mouth","lustful","half-closed eyes"],
+      fluid:["sweat"], cam:["full body","from below"], loc:["bedroom","against wall"], light:["warm lighting","dramatic lighting"] },
+
+    // ---------- 女性自慰 ----------
+    { id:"mast_fingers", name:"手指自慰", min:"explicit", people:1,
+      core:["masturbation","fingering"], body:["spread legs","pussy","thigh gap","nipples"],
+      pose:["lying on back","legs apart","m legs","spread legs"], face:["half-closed eyes","blush","open mouth","lustful"],
+      fluid:["pussy juice","wet"], cam:["from above","close-up"], loc:["on bed","bedroom"], light:["soft lighting","moonlight"] },
+    { id:"mast_clit", name:"揉阴蒂", min:"explicit", people:1,
+      core:["masturbation","rubbing clitoris"], body:["spread legs","pussy","thigh gap","nipples"],
+      pose:["lying on back","spread legs","m legs","legs apart"], face:["ahegao","rolling eyes","blush","open mouth"],
+      fluid:["pussy juice","sweat"], cam:["close-up","from above"], loc:["on bed","bedroom"], light:["soft lighting","warm lighting"] },
+    { id:"mast_vibrator", name:"震动棒自慰", min:"explicit", people:1,
+      core:["masturbation","wand vibrator"], body:["spread legs","pussy","thigh gap","nipples"],
+      pose:["lying on back","legs apart","m legs","spread legs"], face:["ahegao","rolling eyes","open mouth","blush"],
+      fluid:["pussy juice","sweat"], cam:["close-up","from above"], loc:["on bed","bedroom"], light:["neon lighting","soft lighting"] },
+    { id:"mast_dildo", name:"假阳具自慰", min:"explicit", people:1,
+      core:["masturbation","dildo in pussy"], body:["spread legs","pussy","nipples","thigh gap"],
+      pose:["lying on back","legs apart","m legs","spread legs"], face:["ahegao","blush","open mouth","half-closed eyes"],
+      fluid:["pussy juice","wet"], cam:["close-up","from above"], loc:["on bed","bedroom"], light:["soft lighting","warm lighting"] },
+    { id:"mast_riding_dildo", name:"骑假阳具", min:"explicit", people:1,
+      core:["masturbation","riding dildo"], body:["ass","wide hips","thick thighs","nipples"],
+      pose:["straddling","riding","kneeling","on all fours"], face:["looking back","ahegao","blush","open mouth"],
+      fluid:["pussy juice","sweat"], cam:["from above","from behind"], loc:["on bed","on floor"], light:["warm lighting","rim lighting"] },
+    { id:"mast_shower", name:"淋浴自慰", min:"explicit", people:1,
+      core:["masturbation","fingering"], body:["wet","glistening skin","nipples","collarbone"],
+      pose:["standing","leaning forward","legs apart","hand in hair"], face:["closed eyes","parted lips","blush","dazed"],
+      fluid:["wet","pussy juice"], cam:["cowboy shot","from side"], loc:["in shower","bathroom"], light:["rim lighting","volumetric lighting"] },
+    { id:"mast_pillow", name:"骑枕头摩擦", min:"explicit", people:1,
+      core:["masturbation","pillow humping"], body:["ass","thick thighs","wide hips","nipples"],
+      pose:["on all fours","kneeling","straddling","hip thrust"], face:["blush","half-closed eyes","lustful","open mouth"],
+      fluid:["pussy juice","sweat"], cam:["from behind","full body"], loc:["on bed","on sofa"], light:["soft lighting","warm lighting"] },
+    { id:"mast_clothed", name:"隔着衣服自慰", min:"explicit", people:1,
+      core:["masturbation","through panties"], body:["panties","tight clothes","thick thighs","cleavage"],
+      pose:["lying on back","legs apart","sitting","crossed legs"], face:["embarrassed","deep blush","parted lips","lustful"],
+      fluid:["wet","pussy juice"], cam:["from above","close-up"], loc:["on bed","on sofa"], light:["soft lighting","warm lighting"] },
+    { id:"mast_mirror", name:"镜前自慰", min:"explicit", people:1,
+      core:["masturbation","fingering"], body:["ass","breasts","nipples","thick thighs"],
+      pose:["standing","legs apart","looking back","leaning forward"], face:["seductive smile","blush","half-closed eyes","lustful"],
+      fluid:["pussy juice","sweat"], cam:["from behind","full body"], loc:["in front of mirror","bedroom"], light:["soft lighting","moonlight"] },
+    { id:"mast_anal", name:"后庭道具", min:"extreme", people:1,
+      core:["masturbation","butt plug"], body:["ass","huge ass","wide hips","thick thighs"],
+      pose:["on all fours","presenting","kneeling","bent over"], face:["ahegao","looking back","blush","open mouth"],
+      fluid:["pussy juice","sweat"], cam:["from behind","close-up"], loc:["on bed","bedroom"], light:["neon lighting","rim lighting"] },
+    { id:"mast_edging", name:"寸止高潮", min:"extreme", people:1,
+      core:["masturbation","rubbing clitoris","edging"], body:["spread legs","pussy","thigh gap","nipples"],
+      pose:["lying on back","legs apart","m legs","arched back"], face:["ahegao","rolling eyes","tears","open mouth"],
+      fluid:["pussy juice","sweat","drooling"], cam:["close-up","from above"], loc:["on bed","bedroom"], light:["dramatic lighting","soft lighting"] },
+
+    // ---------- 极限 · 多人 / 束缚 / 道具 / 收尾 ----------
+    { id:"threesome", name:"三人行", min:"extreme", people:3,
+      core:["threesome","group sex"], body:["breasts","nipples","ass","wide hips"],
+      pose:["on all fours","lying on back","kneeling","straddling"], face:["ahegao","blush","open mouth","lustful"],
+      fluid:["sweat","saliva"], cam:["full body","dynamic angle"], loc:["on bed","love hotel"], light:["warm lighting","dramatic lighting"] },
+    { id:"spitroast", name:"前后夹击", min:"extreme", people:3,
+      core:["spitroast","double penetration"], body:["breasts","nipples","ass"],
+      pose:["on all fours","kneeling","bent over"], face:["ahegao","mind break","open mouth","drooling"],
+      fluid:["saliva","excessive cum"], cam:["from side","full body"], loc:["on bed","love hotel"], light:["dramatic lighting","warm lighting"] },
+    { id:"bondage", name:"束缚调教", min:"extreme", people:1,
+      core:["bondage","shibari","bound arms"], body:["breasts","nipples","thick thighs"],
+      pose:["suspended","kneeling","arms behind back","legs apart"], face:["blush","half-closed eyes","open mouth","lustful"],
+      fluid:["sweat"], cam:["full body","from above"], loc:["bedroom","on bed"], light:["dramatic lighting","candlelight"] },
+    { id:"toy_play", name:"道具调教", min:"extreme", people:1,
+      core:["sex toy","vibrator","dildo"], body:["spread legs","pussy","nipples","thigh gap"],
+      pose:["lying on back","legs apart","m legs","spread legs"], face:["ahegao","rolling eyes","open mouth","blush"],
+      fluid:["pussy juice","sweat"], cam:["close-up","from above"], loc:["on bed","bedroom"], light:["neon lighting","soft lighting"] },
+    { id:"creampie", name:"内射收尾", min:"extreme", people:2,
+      core:["creampie","vaginal sex"], body:["spread legs","pussy","thigh gap"],
+      pose:["lying on back","legs apart","m legs"], face:["ahegao","after orgasm","blush","dazed"],
+      fluid:["cum overflow","cumdrip","sweat"], cam:["close-up","from above"], loc:["on bed","bedroom"], light:["warm lighting","soft lighting"] },
+    { id:"bukkake", name:"颜射收尾", min:"extreme", people:2,
+      core:["bukkake","facial"], body:["breasts","nipples","bare shoulders"],
+      pose:["kneeling","on knees","leaning forward"], face:["ahegao","deep blush","rolling eyes","open mouth"],
+      fluid:["cum on face","cum on body","excessive cum"], cam:["close-up","upper body"], loc:["on bed","bathroom"], light:["dramatic lighting","warm lighting"] },
+    { id:"squirting", name:"潮吹", min:"extreme", people:1,
+      core:["squirting","orgasm"], body:["spread legs","pussy","thigh gap","nipples"],
+      pose:["lying on back","legs up","m legs","spread legs"], face:["ahegao","rolling eyes","open mouth","mind break"],
+      fluid:["pussy juice","vaginal fluids","sweat"], cam:["close-up","from above"], loc:["in bath","bedroom"], light:["soft lighting","warm lighting"] }
+  ];
+
+  // 强度档位顺序（用于筛选可用场景）
+  const NSFW_ORDER = ["mild", "soft", "medium", "explicit", "extreme"];
+
+  function scenariosForLevel(level) {
+    const maxIdx = NSFW_ORDER.indexOf(level);
+    return SCENARIOS.filter(function (s) { return NSFW_ORDER.indexOf(s.min) <= maxIdx; });
+  }
+  // 优先抽本档场景，也有机会抽低一档的
+  function pickScenario(level) {
+    const elig = scenariosForLevel(level);
+    if (!elig.length) return null;
+    const exact = elig.filter(function (s) { return s.min === level; });
+    let pool = elig;
+    if (exact.length && Math.random() < 0.75) pool = exact;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  // ===== 米哈游角色库 [danbooru 标签, 中文名] =====
+  const CHARACTERS = {
+    genshin: { n: "原神", series: "genshin impact", list: [
+      ["lumine (genshin impact)","荧"],["aether (genshin impact)","空"],["paimon (genshin impact)","派蒙"],
+      ["amber (genshin impact)","安柏"],["lisa (genshin impact)","丽莎"],["jean (genshin impact)","琴"],
+      ["barbara (genshin impact)","芭芭拉"],["klee (genshin impact)","可莉"],["keqing (genshin impact)","刻晴"],
+      ["mona (genshin impact)","莫娜"],["ganyu (genshin impact)","甘雨"],["hu tao (genshin impact)","胡桃"],
+      ["raiden shogun","雷电将军"],["kamisato ayaka","神里绫华"],["yae miko","八重神子"],
+      ["yoimiya (genshin impact)","宵宫"],["sangonomiya kokomi","珊瑚宫心海"],["eula (genshin impact)","优菈"],
+      ["shenhe (genshin impact)","申鹤"],["yun jin (genshin impact)","云堇"],["yelan (genshin impact)","夜兰"],
+      ["nahida (genshin impact)","纳西妲"],["nilou (genshin impact)","妮露"],["furina (genshin impact)","芙宁娜"],
+      ["navia (genshin impact)","娜维娅"],["rosaria (genshin impact)","罗莎莉亚"],["fischl (genshin impact)","菲谢尔"],
+      ["noelle (genshin impact)","诺艾尔"],["sucrose (genshin impact)","砂糖"],["xiangling (genshin impact)","香菱"],
+      ["xingqiu (genshin impact)","行秋"],["chongyun (genshin impact)","重云"],["qiqi (genshin impact)","七七"],
+      ["diona (genshin impact)","迪奥娜"],["sayu (genshin impact)","早柚"],["kuki shinobu","久岐忍"],
+      ["layla (genshin impact)","莱依拉"],["dehya (genshin impact)","迪希雅"],["kirara (genshin impact)","绮良良"],
+      ["lynette (genshin impact)","琳妮特"],["clorinde (genshin impact)","克洛琳德"],["arlecchino (genshin impact)","阿蕾奇诺"],
+      ["sigewinne (genshin impact)","希格雯"],["chiori (genshin impact)","千织"],["xianyun (genshin impact)","闲云"],
+      ["mualani (genshin impact)","玛拉妮"],["xilonen (genshin impact)","希诺宁"],["citlali (genshin impact)","茜特菈莉"],
+      ["mavuika (genshin impact)","玛薇卡"],["escoffier (genshin impact)","爱可菲"],["skirk (genshin impact)","丝柯克"],
+      ["lauma (genshin impact)","菈乌玛"],["nefer (genshin impact)","奈芙尔"]
+    ]},
+    hsr: { n: "崩坏：星穹铁道", series: "honkai: star rail", list: [
+      ["stelle (honkai: star rail)","星"],["caelus (honkai: star rail)","穹"],["march 7th","三月七"],
+      ["dan heng (honkai: star rail)","丹恒"],["himeko (honkai: star rail)","姬子"],["bronya (honkai: star rail)","布洛妮娅"],
+      ["seele (honkai: star rail)","希儿"],["clara (honkai: star rail)","克拉拉"],["kafka (honkai: star rail)","卡芙卡"],
+      ["silver wolf (honkai: star rail)","银狼"],["jing yuan (honkai: star rail)","景元"],["fu xuan (honkai: star rail)","符玄"],
+      ["jingliu (honkai: star rail)","镜流"],["ruan mei (honkai: star rail)","阮•梅"],["black swan (honkai: star rail)","黑天鹅"],
+      ["sparkle (honkai: star rail)","花火"],["acheron (honkai: star rail)","黄泉"],["robin (honkai: star rail)","知更鸟"],
+      ["firefly (honkai: star rail)","流萤"],["jade (honkai: star rail)","翡翠"],["yunli (honkai: star rail)","云璃"],
+      ["feixiao (honkai: star rail)","飞霄"],["lingsha (honkai: star rail)","灵砂"],["tingyun (honkai: star rail)","停云"],
+      ["qingque (honkai: star rail)","青雀"],["bailu (honkai: star rail)","白露"],["huohuo (honkai: star rail)","藿藿"],
+      ["hanya (honkai: star rail)","寒鸦"],["guinaifen (honkai: star rail)","桂乃芬"],["topaz (honkai: star rail)","托帕"],
+      ["aglaea (honkai: star rail)","阿格莱雅"],["castorice (honkai: star rail)","遐蝶"],["hyacine (honkai: star rail)","风堇"],
+      ["tribbie (honkai: star rail)","缇宝"],["cipher (honkai: star rail)","赛飞儿"],["the herta (honkai: star rail)","大黑塔"]
+    ]},
+    hi3: { n: "崩坏3", series: "honkai impact 3rd", list: [
+      ["kiana kaslana","琪亚娜"],["raiden mei","雷电芽衣"],["bronya zaychik","布洛妮娅"],
+      ["murata himeko","无量塔姬子"],["theresa apocalypse","德丽莎"],["fu hua (honkai impact)","符华"],
+      ["yae sakura","八重樱"],["kallen kaslana","卡莲"],["rita rossweisse","丽塔"],
+      ["durandal (honkai impact)","幽兰黛尔"],["seele vollerei","希儿"],["rosaliya (honkai impact)","萝莎莉娅"],
+      ["liliya (honkai impact)","莉莉娅"],["elysia (honkai impact)","爱莉希雅"],["mobius (honkai impact)","梅比乌斯"],
+      ["eden (honkai impact)","伊甸"],["vill-v (honkai impact)","维尔薇"],["griseo (honkai impact)","格蕾修"],
+      ["pardofelis (honkai impact)","帕朵菲莉丝"],["aponia (honkai impact)","阿波尼亚"],["sirin (honkai impact)","西琳"],
+      ["herrscher of sentience","识之律者"],["herrscher of the void","空之律者"],["herrscher of thunder","雷之律者"]
+    ]},
+    zzz: { n: "绝区零", series: "zenless zone zero", list: [
+      ["nicole demara","妮可"],["anby demara","安比"],["billy kid","比利"],
+      ["nekomata (zenless zone zero)","猫又"],["corin wickes","可琳"],["koleda belobog","珂蕾妲"],
+      ["lycaon (zenless zone zero)","莱卡恩"],["grace howard","格莉丝"],["ellen joe","艾莲"],
+      ["zhu yuan","朱鸢"],["qingyi (zenless zone zero)","青衣"],["jane doe (zenless zone zero)","简"],
+      ["burnice white","柏妮思"],["caesar king","凯撒"],["tsukishiro yanagi","月城柳"],
+      ["hoshimi miyabi","星见雅"],["astra yao","阿斯特拉"],["evelyn chevalier","伊芙琳"],
+      ["pulchra fellini","波可娜"],["vivian (zenless zone zero)","薇薇安"],["trigger (zenless zone zero)","扳机"],
+      ["ju fufu","橘福福"],["yixuan (zenless zone zero)","仪玄"],["ukinami yuzuha","浮波柚叶"],
+      ["alice thymefield","爱丽丝"],["seed (zenless zone zero)","席德"],["luciana de montefio","卢西娅"]
+    ]}
+  };
+
+  // 把角色名与作品名注入中文词典
+  Object.keys(CHARACTERS).forEach(function (k) {
+    const g = CHARACTERS[k];
+    CN[g.series] = g.n;
+    g.list.forEach(function (pair) { CN[pair[0]] = pair[1]; });
+  });
+
+  let pickedChars = [];
+  let activeGame = "genshin";
+
+  // ===== 自然语言描述句 =====
+  // 这些标签虽然是「甜辣」池的，但语义属于姿势/表情，要归到动作从句
+  const POSEY = {
+    "looking at viewer":1,"leaning forward":1,"hand on hip":1,"arms behind back":1,"crossed legs":1,
+    "stretching":1,"hair flip":1,"hand in hair":1,"adjusting clothes":1,"pulling skirt":1,
+    "looking back":1,"over shoulder":1,"kneeling":1,"sitting on floor":1,"legs crossed":1,
+    "tiptoe":1,"posing":1,"wink":1,"blush":1,"light blush":1,"parted lips":1,"biting lip":1,
+    "licking lips":1,"seductive smile":1,"half-closed eyes":1,"glancing":1,"shy":1,
+    "flustered":1,"soft smile":1,"slender":1,"slim waist":1,"long legs":1,"beautiful legs":1,
+    "collarbone":1,"nape of neck":1,"beautiful figure":1
+  };
+
+  function toSentence(tags) {
+    const g = {};
+    tags.forEach(function (x) { (g[x.p] = g[x.p] || []).push(x.t); });
+    const c = function (arr) { return (arr || []).map(function (t) { return CN[t] || t; }).join("、"); };
+
+    // 把甜辣池里的姿势/表情类拆出来
+    const mild = g["nsfwMild"] || [];
+    const mildCloth = mild.filter(function (t) { return !POSEY[t]; });
+    const mildPosey = mild.filter(function (t) { return POSEY[t]; });
+
+    const look = [c(g["hair"]), c(g["eyes"]), c(g["body"])].filter(Boolean).join("、");
+    let subjRaw = (g["subject"] && g["subject"][0]) || "一个女孩";
+    subjRaw = CN[subjRaw] || subjRaw;
+    subjRaw = subjRaw.split("，")[0].replace(/^一个/, "");
+    let charPart = "";
+    const charsTxt = (g["character"] || []).map(function (t) { return CN[t] || t; }).join("、");
+    const seriesTxt = (g["series"] || []).map(function (t) { return CN[t] || t; }).join("、");
+    if (charsTxt) charPart = (seriesTxt ? seriesTxt + "中的" : "") + charsTxt + "，";
+    let s = charPart + "一个" + (look ? look + "的" : "") + subjRaw;
+
+    // 服装
+    const wear = [c(g["outfit"]), c(mildCloth), c(g["nsfwSoft"])].filter(Boolean).join("、");
+    if (wear) s += "，穿着" + wear;
+
+    // 身体 / 裸露状态
+    const body = [c(g["nsfwNude"]), c(g["nsfwBody"])].filter(Boolean).join("、");
+    if (body) s += "，" + body;
+
+    // 表情 + 姿势
+    const mood = [c(g["expression"]), c(mildPosey), c(g["pose"]), c(g["nsfwPose"]), c(g["nsfwFace"])].filter(Boolean).join("、");
+    if (mood) s += "，" + mood;
+
+    // 性行为
+    const sex = [c(g["nsfwCore"]), c(g["nsfwAct"]), c(g["nsfwOral"]), c(g["nsfwBreast"]), c(g["nsfwFluid"]), c(g["nsfwToy"]), c(g["nsfwBond"])].filter(Boolean).join("、");
+    if (sex) s += "，" + sex;
+
+    // 场景
+    const scene = [c(g["background"]), c(g["nsfwScene"]), c(g["scene"]), c(g["preset"])].filter(Boolean).join("、");
+    if (scene) s += "，场景是" + scene;
+
+    if (c(g["camera"])) s += "，" + c(g["camera"]);
+    if (c(g["lighting"])) s += "，" + c(g["lighting"]);
+    if (c(g["style"])) s += "，" + c(g["style"]);
+    if (c(g["quality"])) s += "，画面" + c(g["quality"]);
+    if (c(g["custom"])) s += "，" + c(g["custom"]);
+
+    return s + "。";
+  }
+  function sentenceMode() {
+    const el = document.getElementById("sentence");
+    return !!(el && el.checked);
+  }
+  // 排除标签集合
+  function excludeSet() {
+    const el = document.getElementById("exclude");
+    const raw = el ? (el.value || "") : "";
+    const s = {};
+    raw.split(",").forEach(function (t) {
+      const k = t.trim().toLowerCase();
+      if (k) s[k] = true;
+    });
+    return s;
+  }
+
+  // ===== 语言引擎 =====
+  function langMode() {
+    const el = document.getElementById("lang");
+    return el ? el.value : "en";
+  }
+  function t2(tag) {
+    const L = langMode();
+    if (L === "en") return tag;
+    const cn = CN[tag] || tag;
+    if (L === "zh") return cn;
+    return cn + "(" + tag + ")";
+  }
+  // 正向：按当前语言输出（或自然语言描述句）
+  function outString(tags) {
+    if (sentenceMode()) return toSentence(tags);
+    const L = langMode();
+    if (L === "en") return tagsToString(tags);
+    return tags.map(function (x) { return t2(x.t); }).join("，");
+  }
+  // 反向：英文串 -> 当前语言
+  function negDisplay(negStr) {
+    if (!negStr) return "";
+    const L = langMode();
+    if (L === "en") return negStr;
+    return negStr.split(",").map(function (s) { return t2(s.trim()); }).join("，");
+  }
+
+  function pick(arr, n) {
+    const a = arr.slice();
+    const out = [];
+    n = Math.min(n, a.length);
+    for (let i = 0; i < n; i++) {
+      const idx = Math.floor(Math.random() * a.length);
+      out.push(a.splice(idx, 1)[0]);
+    }
+    return out;
+  }
+
+  function shuffle(a) {
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  // ================= 变体引擎（同风格 · 只换细节） =================
+  // 这些池属于"细节"：换掉其中几个，画质/画风/主体/场景/核心行为全部不变
+  const VARY_POOLS = {
+    hair: 1, eyes: 1, expression: 1, camera: 1, lighting: 1, pose: 1, background: 1,
+    nsfwFace: 1, nsfwPose: 1, nsfwFluid: 1, nsfwBody: 1
+  };
+
+  // 标签 → 所属池 反查表（用于从画廊旧图恢复池信息）
+  const TAG_POOL = {};
+  (function buildTagPool() {
+    Object.keys(P).forEach(function (k) {
+      const arr = P[k];
+      // 注意：P.preset 是 {预设名: [...]} 结构，不是数组，要跳过
+      if (!Array.isArray(arr)) return;
+      arr.forEach(function (t) {
+        const key = String(t).toLowerCase();
+        if (!TAG_POOL[key]) TAG_POOL[key] = k;
+      });
+    });
+    const add = function (arr, pool) {
+      (arr || []).forEach(function (t) {
+        const key = String(t).toLowerCase();
+        if (!TAG_POOL[key]) TAG_POOL[key] = pool;
+      });
+    };
+    SCENARIOS.forEach(function (s) {
+      add(s.core, "nsfwCore");
+      add(s.body, "nsfwBody");
+      add(s.pose, "nsfwPose");
+      add(s.face, "nsfwFace");
+      add(s.fluid, "nsfwFluid");
+      add(s.loc, "nsfwScene");
+      add(s.cam, "camera");
+      add(s.light, "lighting");
+    });
+  })();
+
+  // 把提示词字符串还原成标签对象（画廊旧图用），并尽量还原所属池
+  function promptToTags(str) {
+    return String(str || "").split(",").map(function (x) { return x.trim(); })
+      .filter(Boolean)
+      .map(function (x) {
+        const t = x.replace(/^\((.*):[\d.]+\)$/, "$1").trim();
+        return { t: t, p: TAG_POOL[t.toLowerCase()] || "custom", lock: false };
+      });
+  }
+
+  // 从一组标签里推断出对应的场景模板
+  function detectScenario(tags) {
+    const set = {};
+    tags.forEach(function (x) { set[String(x.t).toLowerCase()] = 1; });
+    let best = null;
+    SCENARIOS.forEach(function (s) {
+      const all = s.core.every(function (t) { return set[String(t).toLowerCase()]; });
+      if (all && (!best || s.core.length > best.core.length)) best = s;
+    });
+    return best;
+  }
+
+  /**
+   * 生成"同风格 · 不同细节"的变体：
+   * 只替换 n 个细节标签，其余（画质 / 画风 / 主体 / 角色 / 场景 / 核心行为）原样保留。
+   * @returns {{tags: Array, changed: number}}
+   */
+  function makeVariation(tags, n) {
+    const sc = detectScenario(tags) || activeScenario;
+    const out = tags.slice();
+    const used = {};
+    out.forEach(function (x) { used[String(x.t).toLowerCase()] = 1; });
+
+    const idxs = [];
+    out.forEach(function (x, i) {
+      if (x.lock) return;                 // 用户锁定的标签不动
+      if (VARY_POOLS[x.p]) idxs.push(i);
+    });
+    if (!idxs.length) return { tags: out, changed: 0 };
+
+    shuffle(idxs);
+    const count = Math.min(idxs.length, n || (2 + Math.floor(Math.random() * 3)));
+    let changed = 0;
+
+    for (let k = 0; k < count; k++) {
+      const i = idxs[k];
+      const old = out[i];
+      let cands = null;
+      // 场景内的细节优先在同一个场景的候选里换，保证情境不跑偏
+      if (sc) {
+        if (old.p === "nsfwFace") cands = sc.face;
+        else if (old.p === "nsfwPose") cands = sc.pose;
+        else if (old.p === "nsfwFluid") cands = sc.fluid;
+        else if (old.p === "nsfwBody") cands = sc.body;
+        else if (old.p === "camera") cands = sc.cam;
+        else if (old.p === "lighting") cands = sc.light;
+      }
+      if (!cands || !cands.length) cands = P[old.p] || null;
+      if (!cands || !cands.length) continue;
+
+      const avail = cands.filter(function (t) { return !used[String(t).toLowerCase()]; });
+      if (!avail.length) continue;
+
+      const nt = avail[Math.floor(Math.random() * avail.length)];
+      delete used[String(old.t).toLowerCase()];
+      used[String(nt).toLowerCase()] = 1;
+      out[i] = { t: nt, p: old.p, lock: false };
+      changed++;
+    }
+    return { tags: out, changed: changed };
+  }
+
+  /** 对当前提示词做一次微调，返回实际替换了几个标签 */
+  function applyVariation(n) {
+    if (!currentTags.length) return 0;
+    const r = makeVariation(currentTags, n);
+    if (!r.changed) return 0;
+    currentTags = r.tags;
+    renderTags();
+    refreshStats();
+    addHistory();
+    return r.changed;
+  }
+
+  // CLIP 风格词数估算：单词 + 逗号 + 括号/冒号（加权语法）都算 token（SD1.5 上限 77）
+  function tokenCount(text) {
+    if (!text) return 0;
+    const s = text.trim().replace(/\s+/g, " ");
+    if (!s) return 0;
+    const punct = (s.match(/[(),:]/g) || []).length;
+    const words = s.replace(/[(),:]/g, " ").split(" ").filter(Boolean).length;
+    return words + punct;
+  }
+
+  // 根据本次提示词内容推荐出图参数
+  function computeRecommendation(prompt, level, preset) {
+    const fastEl = document.getElementById("fastModel");
+    if (fastEl && fastEl.checked) {
+      return {
+        sampler: "LCM", steps: 8, cfg: 1, clipSkip: 2, complexity: 0,
+        reason: "DMD2 / LCM 快速模型（LCM + CFG 1 + 8 步）"
+      };
+    }
+    const tags = prompt.split(",").map(function (s) { return s.trim().toLowerCase(); });
+    const has = function (arr) {
+      for (let i = 0; i < arr.length; i++) { if (tags.indexOf(arr[i]) !== -1) return true; }
+      return false;
+    };
+    let complexity = 0;
+    const reasons = [];
+
+    if (has(["threesome","group sex","orgy","spitroast","double penetration"])) {
+      complexity += 3; reasons.push("多主体构图");
+    }
+    if (has(["sex","vaginal","vaginal sex","penetrative sex","penis in vagina","mating press","piledriver","full nelson","suspended congress","wheelbarrow","amazon position","prone bone","anal","anal sex"])) {
+      complexity += 2; reasons.push("复杂性行为");
+    }
+    if (has(["paizuri","titjob","blowjob","fellatio","deepthroat","irrumatio","cunnilingus","licking pussy","sixty-nine","fisting","fingering","masturbation","mutual masturbation","tribadism","scissoring"])) {
+      complexity += 1; reasons.push("局部动作特写");
+    }
+    if (has(["cum","precum","creampie","bukkake","facial","squirting","pussy juice","cumdrip","excessive cum","cum string","overflow"])) {
+      complexity += 1; reasons.push("体液细节");
+    }
+    if (has(["on all fours","legs up","legs apart","m legs","arched back","back arch","presenting","bent over","legs behind head","legs on shoulders","suspended","upside down","spread legs","spread pussy"])) {
+      complexity += 1; reasons.push("复杂姿势");
+    }
+    if (has(["bondage","shibari","bound","bound wrists","bound arms","bound legs","tied up","handcuffs","rope","restraints","suspension bondage","collar","leash"])) {
+      complexity += 1; reasons.push("束缚");
+    }
+    if (has(["dildo","vibrator","wand vibrator","magic wand","sex toy","anal beads","butt plug","anal plug","onahole","sex machine","egg vibrator"])) {
+      complexity += 1; reasons.push("道具");
+    }
+    if (has(["full body","cowboy shot","from below","dynamic angle"])) {
+      complexity += 1; reasons.push("全身/动态构图");
+    }
+    if (has(["close-up","upper body"])) {
+      complexity -= 1; reasons.push("半身/特写（可降步数）");
+    }
+    if (tags.length >= 22) {
+      complexity += 1; reasons.push("标签密集");
+    }
+
+    // 采样器：越复杂越用细节强的 SDE，越简单越用快的 Euler a
+    let sampler;
+    if (complexity >= 4) sampler = "DPM++ SDE Karras";
+    else if (complexity <= 0) sampler = "Euler a";
+    else sampler = "DPM++ 2M Karras";
+    if (preset === "cute" && complexity <= 1) sampler = "Euler a";
+
+    // 步数
+    let steps = 22 + complexity * 2;
+    if (steps < 16) steps = 16;
+    if (steps > 38) steps = 38;
+
+    // CFG
+    let cfg = 7;
+    if (level === "explicit" || level === "extreme") cfg = 6.5;
+    if (preset === "soft" || preset === "painterly") cfg = 6;
+    if (preset === "dark") cfg = 7.5;
+    if (complexity >= 4) cfg += 0.5;
+    if (complexity <= 0) cfg -= 0.5;
+    if (cfg < 4.5) cfg = 4.5;
+    if (cfg > 9) cfg = 9;
+    cfg = Math.round(cfg * 2) / 2;
+
+    // clip skip（这是转换模型时的设置，仅供参考）
+    const clipSkip = (preset === "painterly" || preset === "dark") ? 1 : 2;
+
+    if (reasons.length === 0) reasons.push("标准单主体构图");
+
+    return {
+      sampler: sampler,
+      steps: steps,
+      cfg: cfg,
+      clipSkip: clipSkip,
+      complexity: complexity,
+      reason: (uiLang === "en"
+        ? reasons.map(function (r) { return REASON_EN[r] || r; }).join(", ")
+        : reasons.join("、"))
+    };
+  }
+
+  // ===== 标签互斥组（避免「巨乳+贫乳」这类自相矛盾）=====
+  const EXCLUSIVE = [
+    ["large breasts","huge breasts","gigantic breasts","medium breasts","small breasts","flat chest"],
+    ["long hair","short hair","bob cut"],
+    ["black hair","blonde hair","silver hair","white hair","pink hair","blue hair","purple hair","red hair","green hair","brown hair"],
+    ["blue eyes","red eyes","green eyes","purple eyes","yellow eyes","pink eyes","aqua eyes","brown eyes"],
+    ["standing","sitting","lying","on all fours","kneeling","squatting","presenting","bent over","upside down","suspended","carried","straddling"],
+    ["smile","crying","tears","pout","seductive smile","lustful"],
+    ["closed eyes","rolling eyes","half-closed eyes","eye rolling"],
+    ["nude","completely nude","fully nude"],
+    ["doggy style","cowgirl position","reverse cowgirl","asian cowgirl","missionary","spooning",
+     "standing sex","mating press","prone bone","piledriver","full nelson","suspended congress",
+     "wheelbarrow","lotus position","amazon position","butterfly position","anvil position",
+     "pretzel position","cradle position","eagle position","leg glider","viennese oyster",
+     "upright straddle","kneeling sex","lap sex","sitting sex","side-by-side","face-to-face",
+     "carrying sex","on side","tabletop"],
+    // 自慰方式：一次只保留一种主要方式，避免互相打架
+    ["fingering","finger in pussy","two fingers","three fingers","rubbing clitoris",
+     "clitoral stimulation","clit rubbing","rubbing pussy","pussy rubbing","dildo in pussy",
+     "riding dildo","wand vibrator","magic wand","egg vibrator","g-spot vibrator","clit sucker",
+     "suction cup dildo","anal fingering","anal beads","butt plug","pillow humping",
+     "thigh rubbing","hand in panties","through panties","clothed masturbation",
+     "nipple play","breast massage","fisting","sex machine","onahole"],
+    ["blowjob","fellatio","deepthroat","irrumatio","cunnilingus","licking pussy","paizuri","titjob"],
+    ["on bed","on desk","in shower","in bath","on sofa","changing room","outdoors","beach","poolside"]
+  ];
+
+  function conflictWith(tag, list) {
+    const lt = tag.toLowerCase();
+    for (let g = 0; g < EXCLUSIVE.length; g++) {
+      const grp = EXCLUSIVE[g];
+      if (grp.indexOf(lt) === -1) continue;
+      for (let i = 0; i < list.length; i++) {
+        if (grp.indexOf(list[i].t.toLowerCase()) !== -1) return true;
+      }
+    }
+    return false;
+  }
+
+  // 标签数组 -> 提示词字符串（可选加权）
+  function tagsToString(tags) {
+    let useW = false;
+    const wEl = document.getElementById("weights");
+    if (wEl && wEl.checked) useW = true;
+    return tags.map(function (x) {
+      if (useW) {
+        if (x.p === "quality") return "(" + x.t + ":1.2)";
+        if (x.p === "subject" || x.p === "custom") return "(" + x.t + ":1.1)";
+      }
+      return x.t;
+    }).join(", ");
+  }
+
+  // 生成标签数组（结构化，带所属池），保留锁定标签
+  function generateTags() {
+    const nsfw = document.getElementById("nsfw").checked;
+    const preset = document.getElementById("preset").value;
+    const target = parseInt(document.getElementById("count").value, 10);
+    const customRaw = document.getElementById("custom").value || "";
+    const customTags = Array.from(new Set(
+      customRaw.split(",").map(s => s.trim()).filter(Boolean)
+    ));
+
+    const locked = currentTags.filter(function (x) { return x.lock; });
+
+    const picks = [];
+    const scTags = [];   // 场景逻辑标签：始终保留
+    const add = function (pool, arr, n) {
+      pick(arr, n).forEach(function (t) { picks.push({ t: t, p: pool, lock: false }); });
+    };
+    const addSc = function (pool, arr, n) {
+      pick(arr, n).forEach(function (t) { scTags.push({ t: t, p: pool, lock: false }); });
+    };
+
+    add("quality", P.quality, 2);
+    add("subject", P.subject, 1);
+    add("hair", P.hair, 1);
+    add("eyes", P.eyes, 1);
+    add("body", P.body, 1);
+    add("expression", P.expression, 1);
+    add("pose", P.pose, 1);
+    add("background", P.background, 1);
+    add("lighting", P.lighting, 1);
+    add("style", P.style, 1);
+    add("camera", P.camera, 1);
+    if (!nsfw) add("outfit", P.outfit, 1);
+    if (preset !== "general") add("preset", P.preset[preset], 2);
+
+    if (nsfw) {
+      const level = document.getElementById("nsfwLevel").value;
+      // 优先用用户固定的场景，否则按档位随机抽一个「连贯场景」
+      const manualEl = document.getElementById("nsfwSceneSel");
+      const manual = manualEl ? manualEl.value : "auto";
+      let sc = null;
+      if (manual && manual !== "auto") {
+        for (let i = 0; i < SCENARIOS.length; i++) {
+          if (SCENARIOS[i].id === manual) { sc = SCENARIOS[i]; break; }
+        }
+      }
+      if (!sc) sc = pickScenario(level);
+
+      if (sc) {
+        activeScenario = sc;
+        // 场景自带姿势/表情/地点/镜头/光照/主体，去掉通用随机项以免互相打架
+        const drop = { pose: 1, background: 1, lighting: 1, camera: 1, expression: 1, subject: 1 };
+        for (let i = picks.length - 1; i >= 0; i--) {
+          if (drop[picks[i].p]) picks.splice(i, 1);
+        }
+        // 主体人数由场景决定（避免 1girl 配 threesome）
+        if (sc.people >= 3) scTags.push({ t: "multiple girls", p: "subject", lock: false });
+        else if (sc.people === 2) scTags.push({ t: "2girls", p: "subject", lock: false });
+        else scTags.push({ t: "1girl", p: "subject", lock: false });
+
+        // 核心行为必定出现
+        sc.core.forEach(function (t) { scTags.push({ t: t, p: "nsfwCore", lock: false }); });
+        addSc("nsfwBody", sc.body, 2);
+        addSc("nsfwPose", sc.pose, 2);
+        addSc("nsfwFace", sc.face, 2);
+        if (sc.fluid && sc.fluid.length) addSc("nsfwFluid", sc.fluid, 1);
+        addSc("nsfwScene", sc.loc, 1);
+        addSc("camera", sc.cam, 1);
+        addSc("lighting", sc.light, 1);
+      } else {
+        activeScenario = null;
+        add("nsfwSoft", P.nsfwSoft, 2);
+        add("nsfwBody", P.nsfwBody, 1);
+      }
+    }
+
+    const MAX_TOKENS = 77;
+    const out = [];
+    const seen = {};
+
+    const tryAdd = function (item) {
+      const k = item.t.toLowerCase();
+      if (seen[k]) return false;
+      if (conflictWith(item.t, out)) return false;
+      if (tokenCount(tagsToString(out.concat([item]))) > MAX_TOKENS) return false;
+      seen[k] = true;
+      out.push(item);
+      return true;
+    };
+
+    // 锁定标签永远保留
+    locked.forEach(function (x) { tryAdd({ t: x.t, p: x.p, lock: true }); });
+    // 自定义标签永远保留
+    customTags.forEach(function (t) { tryAdd({ t: t, p: "custom", lock: false }); });
+    // 场景预设标签永远保留
+    if (activeScene !== "none" && SCENES[activeScene]) {
+      SCENES[activeScene].t.forEach(function (t) { tryAdd({ t: t, p: "scene", lock: false }); });
+    }
+    // NSFW 场景逻辑标签永远保留（核心行为优先）
+    scTags.forEach(function (x) { tryAdd({ t: x.t, p: x.p, lock: false }); });
+    // 米哈游角色（含作品标签）永远保留
+    if (pickedChars.length) {
+      Object.keys(CHARACTERS).forEach(function (k) {
+        const g = CHARACTERS[k];
+        const hit = g.list.some(function (p) { return pickedChars.indexOf(p[0]) !== -1; });
+        if (hit) tryAdd({ t: g.series, p: "series", lock: false });
+      });
+      pickedChars.forEach(function (t) { tryAdd({ t: t, p: "character", lock: false }); });
+    }
+    // 随机标签填充到目标数量（跳过被排除的）
+    shuffle(picks);
+    const ex = excludeSet();
+    let added = 0;
+    for (let i = 0; i < picks.length && added < target; i++) {
+      if (ex[picks[i].t.toLowerCase()]) continue;
+      if (tryAdd(picks[i])) added++;
+    }
+    return out;
+  }
+
+  function generateNeg() {
+    const base = pick(NEG_BASE, 14);
+    const extra = pick(NEG_EXTRA, 2);
+    const tags = shuffle(Array.from(new Set([...base, ...extra])));
+    // 同样控制在 77 词以内
+    const MAX = 77;
+    const kept = [];
+    for (const t of tags) {
+      if (tokenCount(kept.concat(t).join(", ")) > MAX) break;
+      kept.push(t);
+    }
+    let s = kept.join(", ");
+    const extraEl = document.getElementById("extraNeg");
+    const extraTags = extraEl ? (extraEl.value || "").trim() : "";
+    if (extraTags) s += ", " + extraTags;
+    return s;
+  }
+
+  // ===== 状态 =====
+  let currentTags = [];
+  let currentNeg = "";
+  let seedValue = 0;
+  let history = [];
+  let favorites = [];
+  let activeScenario = null;
+
+  // ===== 标签渲染 & 交互 =====
+  function renderTags() {
+    const box = document.getElementById("posOut");
+    box.innerHTML = "";
+    if (!currentTags.length) { box.textContent = "点击下方按钮生成"; return; }
+    currentTags.forEach(function (x, i) {
+      const c = document.createElement("span");
+      c.className = "chip" + (x.lock ? " locked" : "");
+      c.textContent = (x.lock ? "🔒 " : "") + t2(x.t);
+      attachChip(c, i);
+      box.appendChild(c);
+    });
+  }
+
+  function attachChip(el, idx) {
+    let timer = null;
+    let longFired = false;
+    const start = function () {
+      longFired = false;
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(function () { longFired = true; toggleLock(idx); }, 480);
+    };
+    const end = function () {
+      if (timer) { clearTimeout(timer); timer = null; }
+      if (!longFired) rerollTag(idx);
+    };
+    const cancel = function () { if (timer) { clearTimeout(timer); timer = null; } };
+    el.addEventListener("pointerdown", start);
+    el.addEventListener("pointerup", end);
+    el.addEventListener("pointercancel", cancel);
+    el.addEventListener("pointerleave", cancel);
+    el.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+  }
+
+  function toggleLock(idx) {
+    const x = currentTags[idx];
+    if (!x) return;
+    currentTags[idx] = { t: x.t, p: x.p, lock: !x.lock };
+    renderTags();
+  }
+
+  function rerollTag(idx) {
+    const x = currentTags[idx];
+    if (!x || x.lock || x.p === "custom") return;
+    let pool;
+    if (x.p === "preset") pool = P.preset[document.getElementById("preset").value];
+    else pool = P[x.p];
+    if (!pool || !pool.length) return;
+
+    const used = {};
+    currentTags.forEach(function (y) { used[y.t.toLowerCase()] = true; });
+    const others = currentTags.filter(function (_, i) { return i !== idx; });
+    const avail = pool.filter(function (t) {
+      if (used[t.toLowerCase()]) return false;
+      return !conflictWith(t, others);
+    });
+    if (!avail.length) return;
+    const nt = avail[Math.floor(Math.random() * avail.length)];
+
+    const trial = currentTags.slice();
+    trial[idx] = { t: nt, p: x.p, lock: false };
+    if (tokenCount(tagsToString(trial)) > 77) return;
+    currentTags = trial;
+    renderTags();
+    refreshStats();
+  }
+
+  function refreshStats() {
+    const en = tagsToString(currentTags);
+    const useSent = sentenceMode();
+    const out = outString(currentTags);
+    const L = langMode();
+    let label, warn;
+    if (useSent) {
+      label = out.replace(/[\s,，。]/g, "").length + " 字 · 描述句";
+      warn = false;
+    } else if (L === "en") {
+      const tc = tokenCount(en);
+      label = tc + (uiLang === "en" ? " / 77 tokens" : " / 77 词");
+      warn = tc >= 70;
+    } else {
+      const cc = out.replace(/[\s,，]/g, "").length;
+      label = cc + " 字";
+      warn = cc > 200;
+    }
+    const el = document.getElementById("tokCount");
+    el.textContent = label;
+    el.style.color = warn ? "#f87171" : "#4ade80";
+
+    const sBox = document.getElementById("sentenceBox");
+    const sOut = document.getElementById("sentenceOut");
+    if (useSent) { sBox.style.display = ""; sOut.textContent = out; }
+    else { sBox.style.display = "none"; }
+
+    updateRec(en);
+  }
+
+  function updateRec(pos) {
+    const rec = computeRecommendation(
+      pos,
+      document.getElementById("nsfwLevel").value,
+      document.getElementById("preset").value
+    );
+    // 单行紧凑展示（原来是 4 格卡片）
+    const line = document.getElementById("recLine");
+    if (line) {
+      line.innerHTML = uiLang === "en"
+        ? ("🎯 <b>" + rec.sampler + "</b> · " + rec.steps + " steps · CFG <b>" + rec.cfg +
+           "</b> · clip " + rec.clipSkip +
+           "<br><span class='hint'>Based on: " + rec.reason + " (complexity " + rec.complexity + ")</span>")
+        : ("🎯 <b>" + rec.sampler + "</b> · " + rec.steps + " 步 · CFG <b>" + rec.cfg +
+           "</b> · clip " + rec.clipSkip +
+           "<br><span class='hint'>依据：" + rec.reason + "（复杂度 " + rec.complexity + "）</span>");
+    }
+
+    if (document.getElementById("autoRec").checked) {
+      const sel = document.getElementById("sampler");
+      for (let i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].text === rec.sampler) { sel.selectedIndex = i; break; }
+      }
+      document.getElementById("steps").value = rec.steps;
+      document.getElementById("cfg").value = rec.cfg;
+    }
+  }
+
+  function genAll() {
+    currentNeg = generateNeg();
+    const L0 = langMode();
+    const negShown = negDisplay(currentNeg);
+    document.getElementById("negOut").textContent = negShown;
+    const nel = document.getElementById("negTokCount");
+    if (L0 === "en") {
+      const nc = tokenCount(currentNeg);
+      nel.textContent = nc + (uiLang === "en" ? " / 77 tokens" : " / 77 词");
+      nel.style.color = nc >= 70 ? "#f87171" : "#4ade80";
+    } else {
+      nel.textContent = negShown.replace(/[\s,，]/g, "").length + " 字";
+      nel.style.color = "#4ade80";
+    }
+
+    // 种子
+    if (!document.getElementById("seedLock").checked) {
+      seedValue = Math.floor(Math.random() * 1000000000);
+    }
+    document.getElementById("seedVal").textContent = seedValue;
+
+    currentTags = generateTags();
+    renderTags();
+    refreshStats();
+    addHistory();
+
+    // 显示本次采用的场景逻辑
+    const si = document.getElementById("scInfo");
+    if (si) {
+      if (activeScenario) {
+        si.textContent = uiLang === "en"
+            ? ("🎬 Scene: " + scName(activeScenario) + " · core " + activeScenario.core.join(" + ") +
+               " · " + activeScenario.people + " subject(s)")
+            : ("🎬 场景逻辑：" + activeScenario.name +
+               " · 核心行为 " + activeScenario.core.join(" + ") +
+               " · 主体 " + activeScenario.people + " 人");
+      } else {
+        si.textContent = "";
+      }
+    }
+  }
+
+  // ===== 历史 / 收藏 =====
+  function loadStore() {
+    try { history = JSON.parse(localStorage.getItem("pg_history") || "[]"); } catch (e) { history = []; }
+    try { favorites = JSON.parse(localStorage.getItem("pg_fav") || "[]"); } catch (e) { favorites = []; }
+    if (!Array.isArray(history)) history = [];
+    if (!Array.isArray(favorites)) favorites = [];
+  }
+  function saveStore() {
+    try {
+      localStorage.setItem("pg_history", JSON.stringify(history.slice(0, 30)));
+      localStorage.setItem("pg_fav", JSON.stringify(favorites.slice(0, 50)));
+    } catch (e) {}
+  }
+
+  function snapshot() {
+    return {
+      tags: currentTags.map(function (x) { return { t: x.t, p: x.p }; }),
+      neg: currentNeg,
+      s: seedValue
+    };
+  }
+
+  function addHistory() {
+    if (!currentTags.length) return;
+    const snap = snapshot();
+    if (history.length && JSON.stringify(history[0].tags) === JSON.stringify(snap.tags)) return;
+    history.unshift(snap);
+    if (history.length > 30) history.length = 30;
+    saveStore();
+    renderLists();
+  }
+
+  function isFav(snap) {
+    const key = JSON.stringify(snap.tags);
+    for (let i = 0; i < favorites.length; i++) {
+      if (JSON.stringify(favorites[i].tags) === key) return true;
+    }
+    return false;
+  }
+
+  function toggleFav(snap) {
+    const key = JSON.stringify(snap.tags);
+    for (let i = 0; i < favorites.length; i++) {
+      if (JSON.stringify(favorites[i].tags) === key) {
+        favorites.splice(i, 1); saveStore(); renderLists(); return;
+      }
+    }
+    favorites.unshift({ tags: snap.tags, neg: snap.neg, s: snap.s });
+    if (favorites.length > 50) favorites.length = 50;
+    saveStore();
+    renderLists();
+  }
+
+  function useSnap(snap) {
+    currentTags = snap.tags.map(function (x) { return { t: x.t, p: x.p, lock: false }; });
+    if (snap.neg) {
+      currentNeg = snap.neg;
+      document.getElementById("negOut").textContent = negDisplay(snap.neg);
+    }
+    if (snap.s) {
+      seedValue = snap.s;
+      document.getElementById("seedVal").textContent = seedValue;
+    }
+    renderTags();
+    refreshStats();
+  }
+
+  function renderLists() {
+    document.getElementById("histN").textContent = history.length;
+    document.getElementById("favN").textContent = favorites.length;
+    // 折叠状态下的摘要
+    const hs = document.getElementById("histSummary");
+    if (hs) {
+      hs.textContent = (history.length || favorites.length)
+        ? ("　" + history.length + " / " + favorites.length) : "";
+    }
+    buildList("histList", history, "hist");
+    buildList("favList", favorites, "fav");
+  }
+
+  // ===== 折叠区块 =====
+  function initCollapsible() {
+    const heads = document.querySelectorAll(".collapsible");
+    for (let i = 0; i < heads.length; i++) {
+      heads[i].addEventListener("click", function () {
+        const target = document.getElementById(this.getAttribute("data-target"));
+        if (!target) return;
+        const opening = (target.style.display === "none");
+        target.style.display = opening ? "" : "none";
+        const c = this.querySelector(".caret");
+        if (c) {
+          if (opening) c.classList.remove("rot");
+          else c.classList.add("rot");
+        }
+      });
+    }
+    const more = document.getElementById("ldMore");
+    if (more) {
+      more.addEventListener("click", function (ev) {
+        if (ev && ev.stopPropagation) ev.stopPropagation();
+        const s = document.getElementById("ldSettings");
+        if (!s) return;
+        s.style.display = (s.style.display === "none") ? "" : "none";
+      });
+    }
+  }
+
+  function buildList(id, arr, kind) {
+    const box = document.getElementById(id);
+    box.innerHTML = "";
+    if (!arr.length) {
+      const e = document.createElement("div");
+      e.className = "empty";
+      e.textContent = kind === "hist" ? "还没有历史记录，生成一次试试" : "还没有收藏，点 ⭐ 收藏喜欢的组合";
+      box.appendChild(e);
+      return;
+    }
+    arr.forEach(function (snap, i) {
+      const item = document.createElement("div");
+      item.className = "pitem";
+
+      const txt = document.createElement("div");
+      txt.className = "ptxt";
+      txt.textContent = snap.tags.map(function (x) { return t2(x.t); }).join("，");
+      item.appendChild(txt);
+
+      const mk = function (label, cls, fn) {
+        const b = document.createElement("button");
+        b.className = "mini" + (cls || "");
+        b.textContent = label;
+        b.addEventListener("click", fn);
+        item.appendChild(b);
+        return b;
+      };
+
+      mk("用", "", function () { useSnap(snap); });
+      mk("⭐", isFav(snap) ? " on" : "", function () { toggleFav(snap); });
+      mk("📋", "", function () {
+        copyText(snap.tags.map(function (x) { return t2(x.t); }).join("，"), this);
+      });
+      mk("✖", "", function () {
+        arr.splice(i, 1);
+        saveStore();
+        renderLists();
+      });
+
+      box.appendChild(item);
+    });
+  }
+
+  // ===== 角色库渲染 =====
+  function renderChars() {
+    const box = document.getElementById("charList");
+    box.innerHTML = "";
+    const g = CHARACTERS[activeGame];
+    if (!g) return;
+    g.list.forEach(function (pair) {
+      const tag = pair[0];
+      const b = document.createElement("span");
+      b.className = "scene" + (pickedChars.indexOf(tag) !== -1 ? " on" : "");
+      b.textContent = pair[1];
+      b.addEventListener("click", function () {
+        const i = pickedChars.indexOf(tag);
+        if (i === -1) pickedChars.push(tag);
+        else pickedChars.splice(i, 1);
+        saveChars();
+        renderChars();
+        genAll();
+      });
+      box.appendChild(b);
+    });
+    document.getElementById("charCount").textContent = pickedChars.length ? "已选 " + pickedChars.length : "";
+  }
+  function saveChars() {
+    try { localStorage.setItem("pg_chars", JSON.stringify(pickedChars)); } catch (e) {}
+  }
+  function loadChars() {
+    try {
+      const s = localStorage.getItem("pg_chars");
+      if (s) { const a = JSON.parse(s); if (Array.isArray(a)) pickedChars = a; }
+    } catch (e) {}
+  }
+
+  // ===== 场景预设渲染 =====
+  function renderScenes() {
+    const box = document.getElementById("scenes");
+    box.innerHTML = "";
+    const add = function (key, label) {
+      const b = document.createElement("span");
+      b.className = "scene" + (activeScene === key ? " on" : "");
+      b.textContent = label;
+      b.addEventListener("click", function () {
+        activeScene = (activeScene === key) ? "none" : key;
+        renderScenes();
+        genAll();
+      });
+      box.appendChild(b);
+    };
+    add("none", "🚫 无");
+    Object.keys(SCENES).forEach(function (k) { add(k, SCENES[k].n); });
+  }
+
+  // ===== 配置备份 =====
+  function exportCfg() {
+    const g = function (id) { return document.getElementById(id).value; };
+    const c = function (id) { return document.getElementById(id).checked; };
+    const cfg = {
+      v: 2,
+      lang: g("lang"), nsfw: c("nsfw"), nsfwLevel: g("nsfwLevel"), preset: g("preset"),
+      count: g("count"), custom: g("custom"), exclude: g("exclude"), extraNeg: g("extraNeg"),
+      sentence: c("sentence"), autoRec: c("autoRec"), fastModel: c("fastModel"),
+      weights: c("weights"), seedLock: c("seedLock"),
+      sampler: g("sampler"), steps: g("steps"), cfg: g("cfg"),
+      scene: activeScene,
+      uiStyle: g("uiStyle"),
+      chars: pickedChars,
+      theme: {
+        a: g("accentPick"), a2: g("accent2Pick"), bg: g("bgPick"),
+        blur: g("blurRange"), alpha: g("alphaRange")
+      },
+      favorites: favorites
+    };
+    const txt = JSON.stringify(cfg);
+    document.getElementById("backupBox").value = txt;
+    copyText(txt, document.getElementById("exportCfg"));
+  }
+
+  function importCfg() {
+    const raw = document.getElementById("backupBox").value.trim();
+    if (!raw) return;
+    let cfg;
+    try { cfg = JSON.parse(raw); } catch (e) { return; }
+    const setV = function (id, v) { if (v !== undefined && v !== null) document.getElementById(id).value = v; };
+    const setC = function (id, v) { if (v !== undefined) document.getElementById(id).checked = !!v; };
+
+    setV("lang", cfg.lang); setC("nsfw", cfg.nsfw); setV("nsfwLevel", cfg.nsfwLevel);
+    setV("preset", cfg.preset); setV("count", cfg.count); setV("custom", cfg.custom);
+    setV("exclude", cfg.exclude); setV("extraNeg", cfg.extraNeg);
+    setC("sentence", cfg.sentence); setC("autoRec", cfg.autoRec);
+    setC("fastModel", cfg.fastModel); setC("weights", cfg.weights); setC("seedLock", cfg.seedLock);
+    setV("sampler", cfg.sampler); setV("steps", cfg.steps); setV("cfg", cfg.cfg);
+    if (cfg.scene) activeScene = cfg.scene;
+    if (cfg.uiStyle) {
+      document.getElementById("uiStyle").value = cfg.uiStyle;
+      setUiStyle(cfg.uiStyle, false);
+    }
+    if (Array.isArray(cfg.chars)) { pickedChars = cfg.chars; saveChars(); }
+    if (cfg.theme) {
+      setV("accentPick", cfg.theme.a); setV("accent2Pick", cfg.theme.a2);
+      setV("bgPick", cfg.theme.bg); setV("blurRange", cfg.theme.blur);
+      setV("alphaRange", cfg.theme.alpha);
+      syncTheme(); saveTheme();
+    }
+    if (Array.isArray(cfg.favorites)) { favorites = cfg.favorites; saveStore(); }
+
+    document.getElementById("countVal").textContent = document.getElementById("count").value;
+    document.getElementById("blurVal").textContent = document.getElementById("blurRange").value;
+    document.getElementById("alphaVal").textContent = document.getElementById("alphaRange").value;
+    renderScenes();
+    renderChars();
+    renderTags();
+    refreshStats();
+    renderLists();
+  }
+
+  // ===== 批量生成 =====
+  function batchGen() {
+    for (let i = 0; i < 5; i++) {
+      currentTags = generateTags();
+      currentNeg = generateNeg();
+      if (!document.getElementById("seedLock").checked) {
+        seedValue = Math.floor(Math.random() * 1000000000);
+      }
+      addHistory();
+    }
+    document.getElementById("seedVal").textContent = seedValue;
+    document.getElementById("negOut").textContent = negDisplay(currentNeg);
+    renderTags();
+    refreshStats();
+    renderLists();
+  }
+
+  function currentRecipe() {
+    const p = outString(currentTags);
+    const n = negDisplay(currentNeg);
+    const sampler = document.getElementById("sampler").value;
+    const steps = document.getElementById("steps").value;
+    const cfg = document.getElementById("cfg").value;
+    return p +
+      "\nNegative prompt: " + n +
+      "\nSteps: " + steps + ", Sampler: " + sampler + ", CFG scale: " + cfg +
+      ", Size: 512x512, Seed: " + seedValue;
+  }
+
+  function copyText(text, btn) {
+    const done = () => {
+      const old = btn.textContent;
+      btn.textContent = "✅ 已复制";
+      btn.classList.add("copied");
+      setTimeout(() => { btn.textContent = old; btn.classList.remove("copied"); }, 1200);
+    };
+    // APK WebView 原生剪贴板桥接（最可靠）
+    if (window.Android && window.Android.copyToClipboard) {
+      try { window.Android.copyToClipboard(text); done(); }
+      catch (e) { fallbackCopy(text, done); }
+      return;
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+    } else {
+      fallbackCopy(text, done);
+    }
+  }
+  function fallbackCopy(text, done) {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); done(); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  document.getElementById("gen").addEventListener("click", genAll);
+  document.getElementById("copyPos").addEventListener("click", function () {
+    copyText(outString(currentTags), this);
+  });
+  document.getElementById("copyNeg").addEventListener("click", function () {
+    copyText(negDisplay(currentNeg), this);
+  });
+  document.getElementById("copyAll").addEventListener("click", function () {
+    copyText(currentRecipe(), this);
+  });
+  document.getElementById("share").addEventListener("click", function () {
+    const txt = currentRecipe();
+    if (window.Android && window.Android.shareText) {
+      try { window.Android.shareText(txt); return; } catch (e) {}
+    }
+    copyText(txt, this);
+  });
+
+  // 历史 / 收藏 切页
+  const tabs = document.querySelectorAll(".tab");
+  for (let i = 0; i < tabs.length; i++) {
+    tabs[i].addEventListener("click", function () {
+      for (let j = 0; j < tabs.length; j++) tabs[j].classList.remove("active");
+      this.classList.add("active");
+      const which = this.getAttribute("data-tab");
+      document.getElementById("histList").style.display = which === "hist" ? "" : "none";
+      document.getElementById("favList").style.display = which === "fav" ? "" : "none";
+    });
+  }
+
+  // 语言切换：立即重渲染，不用重新生成
+  document.getElementById("lang").addEventListener("change", function () {
+    renderTags();
+    refreshStats();
+    renderLists();
+    const L = langMode();
+    const shown = negDisplay(currentNeg);
+    document.getElementById("negOut").textContent = shown;
+    const nel = document.getElementById("negTokCount");
+    if (L === "en") {
+      const nc = tokenCount(currentNeg);
+      nel.textContent = nc + (uiLang === "en" ? " / 77 tokens" : " / 77 词");
+      nel.style.color = nc >= 70 ? "#f87171" : "#4ade80";
+    } else {
+      nel.textContent = shown.replace(/[\s,，]/g, "").length + " 字";
+      nel.style.color = "#4ade80";
+    }
+  });
+
+  // 描述句模式切换
+  document.getElementById("sentence").addEventListener("change", function () {
+    refreshStats();
+  });
+  document.getElementById("exportCfg").addEventListener("click", exportCfg);
+  document.getElementById("importCfg").addEventListener("click", importCfg);
+  document.getElementById("batchGen").addEventListener("click", batchGen);
+
+  // 角色库：作品分页切换
+  const gtabs = document.querySelectorAll(".gtab");
+  for (let i = 0; i < gtabs.length; i++) {
+    gtabs[i].addEventListener("click", function () {
+      for (let j = 0; j < gtabs.length; j++) gtabs[j].classList.remove("active");
+      this.classList.add("active");
+      activeGame = this.getAttribute("data-game");
+      renderChars();
+    });
+  }
+
+  // ===== LocalDream 联动 =====
+  const LD_SCHED = {
+    "DPM++ 2M Karras": "dpm_karras",
+    "Euler a": "euler_a",
+    "DPM++ SDE Karras": "dpm_sde_karras",
+    "DPM++ 2M": "dpm",
+    "Euler": "euler",
+    "UniPC": "dpm",
+    "LCM": "lcm"
+  };
+  function ldSetStatus(t) {
+    const el = document.getElementById("ldStatus");
+    if (el) el.textContent = t ? ("· " + t) : "";
+  }
+  function ldAvailable() {
+    return !!(window.Android && window.Android.ldGenerate);
+  }
+  function ldBuildParams() {
+    const sampler = document.getElementById("sampler").value;
+    return {
+      prompt: tagsToString(currentTags),
+      negative_prompt: currentNeg,
+      steps: parseInt(document.getElementById("steps").value, 10) || 20,
+      cfg: parseFloat(document.getElementById("cfg").value) || 7,
+      seed: seedValue,
+      scheduler: LD_SCHED[sampler] || "dpm",
+      size: 512
+    };
+  }
+
+  // ===== 批量出图状态 =====
+  let ldBatch = { total: 1, done: 0, baseSeed: 0 };
+  let ldImgStart = 0;
+
+  function ldShowResult(uri) {
+    if (!uri) return;
+    const grid = document.getElementById("ldImgGrid");
+    const img = document.createElement("img");
+    img.src = uri;
+    grid.appendChild(img);
+    document.getElementById("ldImgWrap").style.display = "";
+  }
+  function ldSaveToGal(seed, upscaled, w, h) {
+    const ag = document.getElementById("autoGal");
+    if (!ag || !ag.checked || !window.Android.galAdd) return;
+    try {
+      // 原生侧异步写盘，完成后回调 galAdded()
+      window.Android.galAdd(JSON.stringify({
+        seed: seed,
+        prompt: tagsToString(currentTags),
+        neg: currentNeg,
+        steps: document.getElementById("steps").value,
+        cfg: document.getElementById("cfg").value,
+        sampler: document.getElementById("sampler").value,
+        upscaled: upscaled ? 1 : 0,
+        w: w || 512,
+        h: h || 512
+      }));
+    } catch (e) {}
+  }
+  function ldSendOne(i) {
+    const p = ldBuildParams();
+    p.seed = (ldBatch.baseSeed + i * 7919) % 1000000000;
+    ldImgStart = Date.now();
+    document.getElementById("ldProg").textContent =
+      (uiLang === "en" ? ("Image " + (i + 1) + " / " + ldBatch.total + " · submitted, waiting…") : ("第 " + (i + 1) + " / " + ldBatch.total + " 张 · 已提交，等待后端…"));
+    window.Android.ldGenerate(JSON.stringify(p));
+  }
+  function ldNextInBatch() {
+    ldBatch.done++;
+    if (ldBatch.done < ldBatch.total) {
+      document.getElementById("ldProg").textContent =
+        (uiLang === "en" ? ("Image " + (ldBatch.done + 1) + " / " + ldBatch.total + " · preparing…") : ("第 " + (ldBatch.done + 1) + " / " + ldBatch.total + " 张 · 准备中…"));
+      // 留一点间隔，让上一张的 SSE 连接彻底关闭，避免后端推理锁冲突
+      setTimeout(function () { ldSendOne(ldBatch.done); }, 300);
+    } else {
+      document.getElementById("ldBar").style.width = "100%";
+      document.getElementById("ldProg").textContent = (uiLang === "en" ? ("All done — " + ldBatch.total + " image(s)") : ("全部完成，共 " + ldBatch.total + " 张"));
+      ldSetStatus((uiLang === "en" ? ("✅ " + ldBatch.total + " image(s) done") : ("✅ " + ldBatch.total + " 张完成")));
+      playDoneSound();
+    }
+  }
+
+  document.getElementById("ldCheck").addEventListener("click", function () {
+    if (!ldAvailable()) { ldSetStatus(uiLang === "en" ? "APK only" : "仅 APK 内可用"); return; }
+    ldSetStatus("检测中…");
+    window.Android.ldPing();
+  });
+  function ldStartGenerate() {
+    if (!ldAvailable()) { ldSetStatus(uiLang === "en" ? "APK only" : "仅 APK 内可用"); return; }
+    if (!currentTags.length) { ldSetStatus(uiLang === "en" ? "Generate a prompt first" : "先生成提示词"); return; }
+    const n = parseInt(document.getElementById("batchCount").value, 10) || 1;
+    ldBatch = { total: n, done: 0, baseSeed: seedValue };
+    ldSetStatus(uiLang === "en" ? "Rendering…" : "生成中…");
+    document.getElementById("ldProgWrap").style.display = "";
+    document.getElementById("ldImgWrap").style.display = "";
+    document.getElementById("ldImgGrid").innerHTML = "";
+    document.getElementById("ldBar").style.width = "0%";
+    ldSendOne(0);
+  }
+  document.getElementById("ldGen").addEventListener("click", ldStartGenerate);
+
+  // ===== 微调变体（同风格 · 不同细节）=====
+  // 只改细节标签、种子不变，所以构图和风格接近，只换细节
+  document.getElementById("genVary").addEventListener("click", function () {
+    const n = applyVariation();
+    if (!n) { appToast("没有可微调的细节标签"); return; }
+    appToast("已微调 " + n + " 个细节（种子 " + seedValue + " 不变）");
+  });
+  document.getElementById("ldVary").addEventListener("click", function () {
+    const n = applyVariation();
+    if (!n) { appToast("没有可微调的细节标签"); return; }
+    appToast("微调 " + n + " 个细节，用同一颗种子重新出图…");
+    ldStartGenerate();
+  });
+  document.getElementById("ldSave").addEventListener("click", function () {
+    if (window.Android && window.Android.ldSaveImage) window.Android.ldSaveImage();
+  });
+  document.getElementById("ldGoGal").addEventListener("click", function () {
+    switchPage("gallery");
+  });
+  document.getElementById("upscaleNow").addEventListener("click", function () {
+    const path = document.getElementById("upscalerPath").value.trim();
+    if (!path) { appToast("请先填写超分模型路径"); return; }
+    if (!window.Android || !window.Android.ldUpscale) { appToast("仅 APK 内可用"); return; }
+    ldSetStatus(uiLang === "en" ? "Upscaling…" : "超分中…");
+    document.getElementById("ldProgWrap").style.display = "";
+    document.getElementById("ldBar").style.width = "30%";
+    document.getElementById("ldProg").textContent = "4× 超分处理中（需先在 LocalDream 打开「超分」页）…";
+    window.Android.ldUpscale(path);
+  });
+
+  // 供原生回调
+  window.ldPingResult = function (ok, msg) {
+    ldSetStatus(ok ? "✅ 已连接 LocalDream" : ("❌ " + (msg || "连不上，请先打开 LocalDream 并加载模型")));
+  };
+  window.ldProgress = function (step, total) {
+    const per = total ? (step / total) : 0;
+    const overall = ((ldBatch.done + per) / ldBatch.total) * 100;
+    document.getElementById("ldBar").style.width = Math.round(overall) + "%";
+    const sec = ldImgStart ? Math.round((Date.now() - ldImgStart) / 1000) : 0;
+    document.getElementById("ldProg").textContent =
+      "第 " + (ldBatch.done + 1) + " / " + ldBatch.total + " 张 · 采样 " +
+      step + " / " + total + " 步 · " + sec + "s";
+  };
+  window.galAdded = function () {
+    refreshGalBadge();
+  };
+  window.ldComplete = function (seed) {
+    ldShowResult(window.Android.getResultImage());
+    const up = document.getElementById("autoUpscale");
+    const path = document.getElementById("upscalerPath").value.trim();
+    if (up && up.checked && path && window.Android.ldUpscale) {
+      document.getElementById("ldProg").textContent =
+        "第 " + (ldBatch.done + 1) + " / " + ldBatch.total + " 张 · 超分中…";
+      window.Android.ldUpscale(path);
+      return;
+    }
+    ldSaveToGal(seed, false, 512, 512);
+    ldNextInBatch();
+  };
+  window.ldUpscaleDone = function (w, h, ms) {
+    ldShowResult(window.Android.getResultImage());
+    document.getElementById("ldProg").textContent =
+      "超分完成 " + w + "×" + h + " · " + ms + " ms";
+    ldSaveToGal(seedValue, true, w, h);
+    ldNextInBatch();
+  };
+  window.ldError = function (msg) {
+    ldSetStatus("❌ " + msg);
+    const pw = document.getElementById("ldProgWrap");
+    if (pw) pw.style.display = "none";
+  };
+
+  // ===== 应用内提示 / 确认框（WebView 原生 alert 不可靠）=====
+  function appToast(msg) {
+    const t = document.getElementById("appToast");
+    t.textContent = msg;
+    t.style.display = "block";
+    if (t._tm) clearTimeout(t._tm);
+    t._tm = setTimeout(function () { t.style.display = "none"; }, 2400);
+  }
+  function appConfirm(msg, onYes) {
+    const box = document.getElementById("confirmBox");
+    document.getElementById("confirmMsg").textContent = msg;
+    box.style.display = "flex";
+    const yes = document.getElementById("confirmYes");
+    const no = document.getElementById("confirmNo");
+    const close = function () {
+      box.style.display = "none";
+      yes.onclick = null;
+      no.onclick = null;
+    };
+    yes.onclick = function () { close(); onYes(); };
+    no.onclick = close;
+  }
+
+  // ===== 底部菜单分页 =====
+  let currentPage = "generate";
+  function switchPage(p) {
+    currentPage = p;
+    const els = document.querySelectorAll("[data-page]");
+    for (let i = 0; i < els.length; i++) {
+      els[i].style.display = (els[i].getAttribute("data-page") === p) ? "" : "none";
+    }
+    const bns = document.querySelectorAll(".bnitem");
+    for (let i = 0; i < bns.length; i++) {
+      if (bns[i].getAttribute("data-nav") === p) bns[i].classList.add("active");
+      else bns[i].classList.remove("active");
+    }
+    if (p === "gallery") loadGallery();
+    else refreshGalBadge();
+    try { window.scrollTo(0, 0); } catch (e) {}
+  }
+
+  // ===== 画廊 =====
+  let galItems = [];
+  let galSelectMode = false;
+  let galSelected = {};
+
+  function galAvailable() {
+    return !!(window.Android && window.Android.galList);
+  }
+  function refreshGalBadge() {
+    const el = document.getElementById("galBadge");
+    if (!el) return;
+    if (!window.Android || !window.Android.galCount) { el.textContent = ""; return; }
+    try {
+      const n = window.Android.galCount();
+      el.textContent = n > 0 ? n : "";
+    } catch (e) { el.textContent = ""; }
+  }
+
+  function loadGallery() {
+    const grid = document.getElementById("galGrid");
+    if (!galAvailable()) {
+      grid.innerHTML = '<div class="empty" style="grid-column:1/-1">画廊仅在 APK 内可用</div>';
+      document.getElementById("galInfo").textContent = "";
+      return;
+    }
+    try { galItems = JSON.parse(window.Android.galList() || "[]"); }
+    catch (e) { galItems = []; }
+    let sz = 0;
+    try { sz = window.Android.galSize(); } catch (e) {}
+    document.getElementById("galInfo").textContent =
+      galItems.length + " 张 · " + (sz / 1048576).toFixed(1) + " MB";
+    renderGallery();
+    refreshGalBadge();
+  }
+
+  function renderGallery() {
+    const grid = document.getElementById("galGrid");
+    grid.innerHTML = "";
+    if (!galItems.length) {
+      const d = document.createElement("div");
+      d.className = "empty";
+      d.style.gridColumn = "1 / -1";
+      d.textContent = "画廊还是空的 —— 去「提示词」页联动 LocalDream 出图，就会自动存进来";
+      grid.appendChild(d);
+      updateSelInfo();
+      return;
+    }
+    galItems.forEach(function (it) {
+      const d = document.createElement("div");
+      d.className = "galitem" + (galSelected[it.id] ? " sel" : "");
+
+      const img = document.createElement("img");
+      img.src = it.thumb;
+      d.appendChild(img);
+
+      if (it.upscaled) {
+        const ub = document.createElement("div");
+        ub.className = "upbadge";
+        ub.textContent = "4×";
+        d.appendChild(ub);
+      }
+
+      if (galSelectMode) {
+        const t = document.createElement("div");
+        t.className = "tick";
+        t.textContent = galSelected[it.id] ? "✓" : "";
+        d.appendChild(t);
+      }
+
+      d.addEventListener("click", function () {
+        if (galSelectMode) {
+          if (galSelected[it.id]) delete galSelected[it.id];
+          else galSelected[it.id] = true;
+          renderGallery();
+        } else {
+          openViewer(it);
+        }
+      });
+      grid.appendChild(d);
+    });
+    updateSelInfo();
+  }
+
+  function updateSelInfo() {
+    const n = Object.keys(galSelected).length;
+    document.getElementById("galSelInfo").textContent =
+      galSelectMode ? ("已选 " + n + " 张") : "点图片可放大查看";
+    document.getElementById("galBatchBar").style.display = galSelectMode ? "" : "none";
+    document.getElementById("galSelectToggle").textContent = galSelectMode ? "✖ 退出选择" : "☑️ 选择";
+  }
+
+  let galViewerItem = null;
+  function openViewer(it) {
+    galViewerItem = it;
+    const img = document.getElementById("galViewerImg");
+    img.src = window.Android.galFull(it.id);
+    const d = it.ts ? new Date(it.ts).toLocaleString() : "";
+    document.getElementById("galViewerMeta").textContent =
+      [d, "seed " + (it.seed || "-"), (it.steps || "") + " 步 / CFG " + (it.cfg || "") + " / " + (it.sampler || ""),
+       "", it.prompt || ""].join("\n");
+    document.getElementById("galViewer").style.display = "block";
+  }
+
+  document.getElementById("galSelectToggle").addEventListener("click", function () {
+    galSelectMode = !galSelectMode;
+    if (!galSelectMode) galSelected = {};
+    renderGallery();
+  });
+  document.getElementById("galSelAll").addEventListener("click", function () {
+    galSelectMode = true;
+    galItems.forEach(function (it) { galSelected[it.id] = true; });
+    renderGallery();
+  });
+  document.getElementById("galBatchCancel").addEventListener("click", function () {
+    galSelectMode = false;
+    galSelected = {};
+    renderGallery();
+  });
+  document.getElementById("galRefresh").addEventListener("click", loadGallery);
+  // ===== 画廊批量超分 =====
+  function galDoUpscale(ids) {
+    if (!ids.length) { appToast("先选中要超分的图片"); return; }
+    const pathEl = document.getElementById("upscalerPath");
+    const path = pathEl ? pathEl.value.trim() : "";
+    if (!path) {
+      appToast("请先在「生成」页填写超分模型路径");
+      switchPage("generate");
+      return;
+    }
+    if (!window.Android || !window.Android.galUpscale) { appToast("仅 APK 内可用"); return; }
+    appConfirm("对选中的 " + ids.length + " 张图做 4× 超分？　需先在 LocalDream 打开「超分」页；超分结果会存为新的画廊条目，原图保留。", function () {
+      document.getElementById("galUpWrap").style.display = "";
+      document.getElementById("galUpBar").style.width = "0%";
+      document.getElementById("galUpProg").textContent = "准备中…";
+      window.Android.galUpscale(JSON.stringify(ids), path);
+    });
+  }
+  window.galUpscaleProgress = function (i, n) {
+    document.getElementById("galUpProg").textContent = "超分中 " + i + " / " + n;
+    document.getElementById("galUpBar").style.width = Math.round(i * 100 / n) + "%";
+  };
+  window.galUpscaleDone = function (ok, total, err) {
+    const pe = document.getElementById("galUpProg");
+    if (ok > 0 && !err) {
+      pe.style.color = "#4ade80";
+      pe.textContent = "完成：成功 " + ok + " / " + total;
+    } else if (ok > 0) {
+      pe.style.color = "#fbbf24";
+      pe.textContent = "部分成功 " + ok + " / " + total + "　失败原因：" + err;
+    } else {
+      pe.style.color = "#f87171";
+      pe.textContent = "❌ 全部失败（" + total + " 张）：" + (err || "未知原因");
+    }
+    document.getElementById("galUpBar").style.width = "100%";
+    galSelected = {};
+    galSelectMode = false;
+    loadGallery();
+    if (ok > 0) playDoneSound();
+    appToast(ok > 0 ? ("超分完成，新增 " + ok + " 张") : "超分失败，请查看卡片里的原因");
+  };
+
+  // 超分后端自检
+  document.getElementById("upscaleTest").addEventListener("click", function () {
+    if (!window.Android || !window.Android.ldPingUpscale) { appToast("仅 APK 内可用"); return; }
+    const el = document.getElementById("upTestInfo");
+    el.style.color = "var(--muted)";
+    el.textContent = "正在测试超分后端…（需先填路径并在 LocalDream 打开「超分」页）";
+    window.Android.ldPingUpscale(document.getElementById("upscalerPath").value.trim());
+  });
+  window.upPingResult = function (ok, msg) {
+    const el = document.getElementById("upTestInfo");
+    el.style.color = ok ? "#4ade80" : "#f87171";
+    el.textContent = ok ? ("✅ 超分后端正常，测试输出 " + msg) : ("❌ " + msg);
+  };
+
+  // 自动探测超分模型路径
+  document.getElementById("upscaleProbe").addEventListener("click", function () {
+    if (!window.Android || !window.Android.ldProbeUpscaler) { appToast("仅 APK 内可用"); return; }
+    const el = document.getElementById("upTestInfo");
+    el.style.color = "var(--muted)";
+    el.textContent = "正在逐个探测候选路径…（需先在 LocalDream 打开「超分」页）";
+    window.Android.ldProbeUpscaler();
+  });
+  window.upProbeProgress = function (i, n) {
+    const el = document.getElementById("upTestInfo");
+    el.style.color = "var(--muted)";
+    el.textContent = "探测中 " + i + " / " + n + " …";
+  };
+  window.upProbeResult = function (ok, path, extra) {
+    const el = document.getElementById("upTestInfo");
+    if (ok) {
+      document.getElementById("upscalerPath").value = path;
+      el.style.color = "#4ade80";
+      el.textContent = "✅ 找到可用路径（测试输出 " + extra + "），已自动填入：\n" + path;
+    } else {
+      el.style.color = "#f87171";
+      el.textContent = "❌ " + extra +
+        "\n\n提示：请先在 LocalDream 的「超分」页下载超分模型，并停留在那个页面。";
+    }
+  };
+
+  document.getElementById("galBatchUp").addEventListener("click", function () {
+    galDoUpscale(Object.keys(galSelected));
+  });
+  document.getElementById("galViewerUp").addEventListener("click", function () {
+    if (!galViewerItem) return;
+    const id = galViewerItem.id;
+    document.getElementById("galViewer").style.display = "none";
+    galDoUpscale([id]);
+  });
+  // 还原这张图的提示词 + 种子，微调几个细节后回到生成页
+  document.getElementById("galViewerVary").addEventListener("click", function () {
+    if (!galViewerItem) return;
+    const it = galViewerItem;
+    const tags = promptToTags(it.prompt);
+    if (!tags.length) { appToast("这张图没有保存提示词"); return; }
+    currentTags = tags;
+    const sd = parseInt(it.seed, 10);
+    if (!isNaN(sd)) {
+      seedValue = sd;
+      document.getElementById("seedVal").textContent = seedValue;
+    }
+    const n = applyVariation();
+    document.getElementById("galViewer").style.display = "none";
+    switchPage("generate");
+    appToast("已还原该图配方并微调 " + n + " 个细节（种子 " + seedValue + "）");
+  });
+
+  document.getElementById("galBatchSave").addEventListener("click", function () {
+    const ids = Object.keys(galSelected);
+    if (!ids.length) { appToast("先选中要保存的图片"); return; }
+    let n = 0;
+    try { n = window.Android.galExport(JSON.stringify(ids)); } catch (e) {}
+    appToast("已保存 " + n + " 张到相册 Pictures/PromptGen");
+  });
+  document.getElementById("galBatchDel").addEventListener("click", function () {
+    const ids = Object.keys(galSelected);
+    if (!ids.length) { appToast("先选中要删除的图片"); return; }
+    appConfirm("确定删除选中的 " + ids.length + " 张图片？此操作不可恢复。", function () {
+      let n = 0;
+      try { n = window.Android.galDelete(JSON.stringify(ids)); } catch (e) {}
+      galSelected = {};
+      galSelectMode = false;
+      loadGallery();
+      appToast("已删除 " + n + " 张");
+    });
+  });
+  document.getElementById("galViewerClose").addEventListener("click", function () {
+    document.getElementById("galViewer").style.display = "none";
+  });
+  document.getElementById("galViewerCopy").addEventListener("click", function () {
+    if (!galViewerItem) return;
+    const it = galViewerItem;
+    copyText((it.prompt || "") + "\nNegative prompt: " + (it.neg || "") +
+      "\nSteps: " + (it.steps || "") + ", Sampler: " + (it.sampler || "") +
+      ", CFG scale: " + (it.cfg || "") + ", Seed: " + (it.seed || ""), this);
+  });
+
+  // 底部菜单导航
+  const pnavs = document.querySelectorAll(".bnitem");
+  for (let i = 0; i < pnavs.length; i++) {
+    pnavs[i].addEventListener("click", function () {
+      switchPage(this.getAttribute("data-nav"));
+    });
+  }
+  switchPage("generate");
+
+  // ===== 场景逻辑下拉 =====
+  function refreshScenarioOptions() {
+    const sel = document.getElementById("nsfwSceneSel");
+    if (!sel) return;
+    const cur = sel.value;
+    const lvEl = document.getElementById("nsfwLevel");
+    const lv = lvEl ? lvEl.value : "medium";
+    const list = scenariosForLevel(lv);
+    sel.innerHTML = '<option value="auto">' + T("opt.auto") + '</option>';
+    list.forEach(function (s) {
+      const o = document.createElement("option");
+      o.value = s.id;
+      o.textContent = scName(s);
+      sel.appendChild(o);
+    });
+    let ok = (cur === "auto");
+    for (let i = 0; i < list.length; i++) { if (list[i].id === cur) ok = true; }
+    sel.value = ok ? cur : "auto";
+  }
+  document.getElementById("nsfwLevel").addEventListener("change", refreshScenarioOptions);
+
+  // UI 风格切换
+  document.getElementById("uiStyle").addEventListener("change", function () {
+    setUiStyle(this.value, true);
+    appToast(this.value === "genshin" ? "✨ 已切换原神风格" : "已切换现代风格");
+  });
+
+  const countInput = document.getElementById("count");
+  countInput.addEventListener("input", function () {
+    document.getElementById("countVal").textContent = this.value;
+  });
+
+  // ===== 外观 / 主题 =====
+  const THEMES = {
+    purple: { a: "#ff5c8a", a2: "#8a7bff", bg: "#0e0c18" },
+    ocean:  { a: "#38bdf8", a2: "#6366f1", bg: "#08101c" },
+    rose:   { a: "#fb7185", a2: "#f472b6", bg: "#180a12" },
+    mint:   { a: "#34d399", a2: "#22d3ee", bg: "#06140f" },
+    amber:  { a: "#fbbf24", a2: "#fb7185", bg: "#150f08" },
+    violet: { a: "#a855f7", a2: "#ec4899", bg: "#100a1c" },
+    forest: { a: "#84cc16", a2: "#14b8a6", bg: "#0a1206" },
+    mono:   { a: "#d4d4d8", a2: "#71717a", bg: "#0a0a0c" },
+    genshin:{ a: "#ffd26f", a2: "#d3bc8e", bg: "#1a1826" }
+  };
+  const DEFAULT_THEME = { a: "#ff5c8a", a2: "#8a7bff", bg: "#0e0c18", blur: 18, alpha: 7 };
+  const GENSHIN_THEME = { a: "#ffd26f", a2: "#d3bc8e", bg: "#1a1826" };
+
+  // UI 风格：modern / genshin
+  function setUiStyle(v, applyColors) {
+    document.body.classList.toggle("genshin", v === "genshin");
+    try { localStorage.setItem("pg_uistyle", v); } catch (e) {}
+    if (applyColors && v === "genshin") {
+      document.getElementById("accentPick").value = GENSHIN_THEME.a;
+      document.getElementById("accent2Pick").value = GENSHIN_THEME.a2;
+      document.getElementById("bgPick").value = GENSHIN_THEME.bg;
+      document.getElementById("blurRange").value = 14;
+      document.getElementById("blurVal").textContent = "14";
+      document.getElementById("alphaRange").value = 10;
+      document.getElementById("alphaVal").textContent = "10";
+      syncTheme();
+      saveTheme();
+    }
+  }
+
+  function applyTheme(a, a2, bg) {
+    const r = document.documentElement.style;
+    r.setProperty("--accent", a);
+    r.setProperty("--accent2", a2);
+    r.setProperty("--bg", bg);
+    document.getElementById("accentHex").textContent = a;
+    document.getElementById("accent2Hex").textContent = a2;
+    document.getElementById("bgHex").textContent = bg;
+  }
+  function applyGlass(blur, alpha) {
+    const r = document.documentElement.style;
+    r.setProperty("--glass-blur", blur + "px");
+    r.setProperty("--glass-a", (alpha / 100).toFixed(3));
+  }
+  function syncTheme() {
+    applyTheme(
+      document.getElementById("accentPick").value,
+      document.getElementById("accent2Pick").value,
+      document.getElementById("bgPick").value
+    );
+    applyGlass(
+      document.getElementById("blurRange").value,
+      document.getElementById("alphaRange").value
+    );
+  }
+  function saveTheme() {
+    try {
+      localStorage.setItem("pg_theme", JSON.stringify({
+        a: document.getElementById("accentPick").value,
+        a2: document.getElementById("accent2Pick").value,
+        bg: document.getElementById("bgPick").value,
+        blur: document.getElementById("blurRange").value,
+        alpha: document.getElementById("alphaRange").value
+      }));
+    } catch (e) {}
+  }
+
+  // 生成色卡
+  (function () {
+    const wrap = document.getElementById("swatches");
+    Object.keys(THEMES).forEach(function (k) {
+      const t = THEMES[k];
+      const b = document.createElement("button");
+      b.className = "swatch";
+      b.title = k;
+      b.style.background = "linear-gradient(135deg," + t.a + "," + t.a2 + ")";
+      b.addEventListener("click", function () {
+        document.getElementById("accentPick").value = t.a;
+        document.getElementById("accent2Pick").value = t.a2;
+        document.getElementById("bgPick").value = t.bg;
+        syncTheme(); saveTheme();
+      });
+      wrap.appendChild(b);
+    });
+  })();
+
+  ["accentPick", "accent2Pick", "bgPick"].forEach(function (id) {
+    document.getElementById(id).addEventListener("input", function () { syncTheme(); saveTheme(); });
+  });
+  document.getElementById("blurRange").addEventListener("input", function () {
+    document.getElementById("blurVal").textContent = this.value;
+    syncTheme(); saveTheme();
+  });
+  document.getElementById("alphaRange").addEventListener("input", function () {
+    document.getElementById("alphaVal").textContent = this.value;
+    syncTheme(); saveTheme();
+  });
+  document.getElementById("resetTheme").addEventListener("click", function () {
+    document.getElementById("accentPick").value = DEFAULT_THEME.a;
+    document.getElementById("accent2Pick").value = DEFAULT_THEME.a2;
+    document.getElementById("bgPick").value = DEFAULT_THEME.bg;
+    document.getElementById("blurRange").value = DEFAULT_THEME.blur;
+    document.getElementById("alphaRange").value = DEFAULT_THEME.alpha;
+    document.getElementById("blurVal").textContent = DEFAULT_THEME.blur;
+    document.getElementById("alphaVal").textContent = DEFAULT_THEME.alpha;
+    syncTheme(); saveTheme();
+  });
+
+  // 载入已保存主题
+  (function () {
+    try {
+      const s = localStorage.getItem("pg_theme");
+      if (s) {
+        const t = JSON.parse(s);
+        if (t.a) document.getElementById("accentPick").value = t.a;
+        if (t.a2) document.getElementById("accent2Pick").value = t.a2;
+        if (t.bg) document.getElementById("bgPick").value = t.bg;
+        if (t.blur !== undefined) {
+          document.getElementById("blurRange").value = t.blur;
+          document.getElementById("blurVal").textContent = t.blur;
+        }
+        if (t.alpha !== undefined) {
+          document.getElementById("alphaRange").value = t.alpha;
+          document.getElementById("alphaVal").textContent = t.alpha;
+        }
+      }
+    } catch (e) {}
+    syncTheme();
+  })();
+
+  // ================= AI 对话 =================
+  const AI_PROVIDERS = [
+    { id: "gemini", name: "Google Gemini（有免费额度）",
+      base: "https://generativelanguage.googleapis.com/v1beta/openai", model: "gemini-2.0-flash",
+      hint: "Google AI Studio 可直接申请免费 Key，额度较大。", url: "https://aistudio.google.com/apikey" },
+    { id: "groq", name: "Groq（完全免费·极快）",
+      base: "https://api.groq.com/openai/v1", model: "llama-3.3-70b-versatile",
+      hint: "每天有免费额度，速度非常快。", url: "https://console.groq.com/keys" },
+    { id: "openrouter", name: "OpenRouter（有 :free 免费模型）",
+      base: "https://openrouter.ai/api/v1", model: "meta-llama/llama-3.3-70b-instruct:free",
+      hint: "模型名带 :free 后缀的是免费模型。", url: "https://openrouter.ai/keys" },
+    { id: "siliconflow", name: "硅基流动 SiliconFlow（注册送额度）",
+      base: "https://api.siliconflow.cn/v1", model: "Qwen/Qwen2.5-7B-Instruct",
+      hint: "国内直连，注册送额度。", url: "https://cloud.siliconflow.cn/account/ak" },
+    { id: "zhipu", name: "智谱 GLM（glm-4-flash 免费）",
+      base: "https://open.bigmodel.cn/api/paas/v4", model: "glm-4-flash",
+      hint: "glm-4-flash 模型免费，国内直连。", url: "https://open.bigmodel.cn/usercenter/apikeys" },
+    { id: "dashscope", name: "阿里百炼（有免费额度）",
+      base: "https://dashscope.aliyuncs.com/compatible-mode/v1", model: "qwen-turbo",
+      hint: "阿里云百炼，国内直连。", url: "https://bailian.console.aliyun.com/" },
+    { id: "deepseek", name: "DeepSeek（便宜好用）",
+      base: "https://api.deepseek.com/v1", model: "deepseek-chat",
+      hint: "国内直连，价格很低。", url: "https://platform.deepseek.com/api_keys" },
+    { id: "moonshot", name: "Moonshot Kimi",
+      base: "https://api.moonshot.cn/v1", model: "moonshot-v1-8k",
+      hint: "国内直连。", url: "https://platform.moonshot.cn/console/api-keys" },
+    { id: "openai", name: "OpenAI 官方",
+      base: "https://api.openai.com/v1", model: "gpt-4o-mini",
+      hint: "官方接口，需要付费账户。", url: "https://platform.openai.com/api-keys" },
+    { id: "custom", name: "⚙️ 自定义（任意 OpenAI 兼容接口）",
+      base: "", model: "",
+      hint: "填任意兼容 /chat/completions 的地址即可（如自建 one-api / new-api 网关、Ollama 等）。", url: "" }
+  ];
+
+  const AI_DEFAULT_SYS =
+    "你是 Stable Diffusion 1.5 的提示词助手。用户描述想要的画面，你直接输出 danbooru 风格的英文标签（逗号分隔，总词数不超过 70），不要客套话、不要解释。如果用户追问，再补充推荐的采样器 / 步数 / CFG。";
+
+  let aiMsgs = [];
+  let aiBusy = false;
+  let aiStreamId = null;
+  let aiStreamText = "";
+  let aiLastUser = "";
+
+  function aiCfg() {
+    return {
+      baseUrl: document.getElementById("aiBase").value.trim(),
+      apiKey: document.getElementById("aiKey").value.trim(),
+      model: document.getElementById("aiModelName").value.trim(),
+      temperature: parseFloat(document.getElementById("aiTemp").value) || 0.8,
+      maxTokens: 2048
+    };
+  }
+  function aiUpdateBadge() {
+    const el = document.getElementById("aiModelBadge");
+    if (el) {
+      const m = document.getElementById("aiModelName").value.trim();
+      el.textContent = m ? ("　" + m) : "";
+    }
+  }
+  function aiSave() {
+    try {
+      localStorage.setItem("pg_ai", JSON.stringify({
+        preset: document.getElementById("aiPreset").value,
+        base: document.getElementById("aiBase").value,
+        key: document.getElementById("aiKey").value,
+        model: document.getElementById("aiModelName").value,
+        temp: document.getElementById("aiTemp").value,
+        sys: document.getElementById("aiSys").value
+      }));
+    } catch (e) {}
+  }
+  function aiApplyPreset(id, silent) {
+    let p = null;
+    for (let i = 0; i < AI_PROVIDERS.length; i++) { if (AI_PROVIDERS[i].id === id) p = AI_PROVIDERS[i]; }
+    if (!p) return;
+    if (p.base) document.getElementById("aiBase").value = p.base;
+    if (p.model) document.getElementById("aiModelName").value = p.model;
+    if (!document.getElementById("aiSys").value.trim()) {
+      document.getElementById("aiSys").value = AI_DEFAULT_SYS;
+    }
+    const h = document.getElementById("aiPresetHint");
+    h.innerHTML = p.hint + (p.url
+      ? ('<br>🔗 获取 Key：<span style="color:var(--accent2)">' + p.url + "</span>")
+      : "");
+    if (p.url) {
+      if (!h._btn) {
+        const b = document.createElement("button");
+        b.className = "minibtn";
+        b.textContent = "🌐 打开官网获取 Key";
+        b.style.marginTop = "6px";
+        h.appendChild(document.createElement("br"));
+        h.appendChild(b);
+        h._btn = b;
+      }
+      h._btn.onclick = function () {
+        if (window.Android && window.Android.openUrl) window.Android.openUrl(p.url);
+        else appToast(p.url);
+      };
+    } else if (h._btn) {
+      h._btn.style.display = "none";
+    }
+    aiUpdateBadge();
+    if (!silent) { aiSave(); }
+  }
+  function aiLoad() {
+    const sel = document.getElementById("aiPreset");
+    sel.innerHTML = "";
+    AI_PROVIDERS.forEach(function (p) {
+      const o = document.createElement("option");
+      o.value = p.id;
+      o.textContent = p.name;
+      sel.appendChild(o);
+    });
+    let s = null;
+    try { s = JSON.parse(localStorage.getItem("pg_ai") || "null"); } catch (e) {}
+    if (s) {
+      sel.value = s.preset || "gemini";
+      document.getElementById("aiBase").value = s.base || "";
+      document.getElementById("aiKey").value = s.key || "";
+      document.getElementById("aiModelName").value = s.model || "";
+      document.getElementById("aiTemp").value = s.temp || "0.8";
+      document.getElementById("aiSys").value = s.sys || AI_DEFAULT_SYS;
+      aiApplyPreset(sel.value, true);
+      // 预设会覆盖 base/model，这里恢复用户自己填的
+      document.getElementById("aiBase").value = s.base || document.getElementById("aiBase").value;
+      document.getElementById("aiModelName").value = s.model || document.getElementById("aiModelName").value;
+    } else {
+      sel.value = "gemini";
+      document.getElementById("aiSys").value = AI_DEFAULT_SYS;
+      aiApplyPreset("gemini", true);
+    }
+    document.getElementById("aiTempVal").textContent = document.getElementById("aiTemp").value;
+    aiUpdateBadge();
+    try { aiMsgs = JSON.parse(localStorage.getItem("pg_ai_msgs") || "[]"); } catch (e) { aiMsgs = []; }
+    if (!Array.isArray(aiMsgs)) aiMsgs = [];
+    aiRender();
+  }
+  function aiSaveHistory() {
+    try { localStorage.setItem("pg_ai_msgs", JSON.stringify(aiMsgs.slice(-60))); } catch (e) {}
+  }
+
+  function aiBubble(m) {
+    const wrap = document.createElement("div");
+    wrap.className = "msg " + (m.role === "user" ? "user" : (m.role === "error" ? "err" : "ai"));
+    const txt = document.createElement("div");
+    txt.textContent = m.content;
+    wrap.appendChild(txt);
+    if (m.role === "assistant" && m.content) {
+      const acts = document.createElement("div");
+      acts.className = "acts";
+      const b1 = document.createElement("button");
+      b1.className = "minibtn";
+      b1.textContent = "↧ 导入提示词";
+      b1.onclick = function () { aiImportAsPrompt(m.content); };
+      const b2 = document.createElement("button");
+      b2.className = "minibtn";
+      b2.textContent = "📋 复制";
+      b2.onclick = function () { copyText(m.content); };
+      acts.appendChild(b1);
+      acts.appendChild(b2);
+      wrap.appendChild(acts);
+    }
+    return wrap;
+  }
+  function aiRender() {
+    const box = document.getElementById("aiMsgs");
+    if (!box) return;
+    if (!aiMsgs.length && !aiBusy) {
+      box.innerHTML = '<div class="empty">' + T("ai.empty") + '</div>';
+      return;
+    }
+    box.innerHTML = "";
+    aiMsgs.forEach(function (m) { box.appendChild(aiBubble(m)); });
+    if (aiBusy) {
+      const d = document.createElement("div");
+      d.className = "msg ai dot3";
+      d.id = "aiTyping";
+      d.textContent = aiStreamText || "思考中";
+      box.appendChild(d);
+    }
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function aiSetBusy(b) {
+    aiBusy = b;
+    document.getElementById("aiStop").style.display = b ? "" : "none";
+    document.getElementById("aiSend").style.display = b ? "none" : "";
+  }
+  function aiFriendly(msg) {
+    const m = String(msg);
+    if (m.indexOf("401") >= 0) return m + "\n→ API Key 无效或没填对";
+    if (m.indexOf("403") >= 0) return m + "\n→ Key 无权限，或该模型对你不可用";
+    if (m.indexOf("404") >= 0) return m + "\n→ Base URL 或模型名不对";
+    if (m.indexOf("429") >= 0) return m + "\n→ 触发限流，稍后再试（免费额度常见）";
+    if (m.indexOf("connect") >= 0 || m.indexOf("timeout") >= 0 || m.indexOf("timed out") >= 0) {
+      return m + "\n→ 网络不通，检查网络连接/代理";
+    }
+    return m;
+  }
+  function aiFinish(text) {
+    aiSetBusy(false);
+    if (text) aiMsgs.push({ role: "assistant", content: text });
+    aiSaveHistory();
+    aiStreamText = "";
+    aiRender();
+  }
+
+  function aiStart() {
+    const cfg = aiCfg();
+    const payload = [];
+    const sys = document.getElementById("aiSys").value.trim();
+    if (sys) payload.push({ role: "system", content: sys });
+    aiMsgs.forEach(function (m) {
+      if (m.role === "user" || m.role === "assistant") payload.push({ role: m.role, content: m.content });
+    });
+
+    if (!window.Android || !window.Android.aiChat) {
+      aiMsgs.push({ role: "error", content: "仅 APK 内可用（浏览器里受跨域限制，无法直接调用 API）" });
+      aiRender();
+      return;
+    }
+    aiStreamText = "";
+    aiStreamId = "req_" + Date.now();
+    aiSetBusy(true);
+    aiRender();
+    window.Android.aiChat(JSON.stringify(cfg), JSON.stringify(payload), aiStreamId);
+  }
+
+  function aiSendMsg() {
+    const inp = document.getElementById("aiInput");
+    const text = inp.value.trim();
+    if (!text) return;
+    if (aiBusy) { appToast("正在回复中，稍等"); return; }
+    const cfg = aiCfg();
+    if (!cfg.baseUrl || !cfg.model) {
+      appToast("先点右上角 ⚙️ 配置 API");
+      document.getElementById("aiCfgBox").style.display = "";
+      return;
+    }
+    inp.value = "";
+    aiLastUser = text;
+    aiMsgs.push({ role: "user", content: text });
+    aiRender();
+    aiStart();
+  }
+
+  window.aiDelta = function (reqId, piece) {
+    if (reqId !== aiStreamId) return;
+    aiStreamText += piece;
+    const t = document.getElementById("aiTyping");
+    if (t) {
+      t.classList.remove("dot3");
+      t.textContent = aiStreamText;
+      const box = document.getElementById("aiMsgs");
+      if (box) box.scrollTop = box.scrollHeight;
+    }
+  };
+  window.aiDone = function (reqId, full) {
+    if (reqId !== aiStreamId) return;
+    aiFinish(full || aiStreamText);
+  };
+  window.aiStopped = function (reqId, full) {
+    if (reqId !== aiStreamId) return;
+    const t = full || aiStreamText;
+    aiFinish(t ? (t + "\n\n（已中断）") : "（已中断）");
+  };
+  window.aiError = function (reqId, msg) {
+    if (reqId !== aiStreamId) return;
+    aiSetBusy(false);
+    aiStreamText = "";
+    aiMsgs.push({ role: "error", content: "请求失败：" + aiFriendly(msg) });
+    aiSaveHistory();
+    aiRender();
+  };
+  window.aiPingResult = function (ok, msg) {
+    const el = document.getElementById("aiCfgInfo");
+    el.style.color = ok ? "#4ade80" : "#f87171";
+    el.textContent = ok ? ("✅ " + msg) : ("❌ " + aiFriendly(msg));
+  };
+
+  // 把 AI 回复里的英文标签提取出来，直接当作正向提示词
+  function aiImportAsPrompt(text) {
+    let t = String(text);
+    const m = t.match(/```[a-zA-Z]*\n?([\s\S]*?)```/);
+    if (m && m[1].trim()) t = m[1];
+    t = t.replace(/```/g, " ");
+    const parts = t.split(/[,，、\n]/).map(function (s) { return s.trim(); })
+      .filter(function (s) {
+        return s && s.length < 60 && /^[\x20-\x7E]+$/.test(s) && /[a-zA-Z]/.test(s);
+      });
+    const uniq = [];
+    const seen = {};
+    parts.forEach(function (s) {
+      const k = s.toLowerCase();
+      if (!seen[k]) { seen[k] = 1; uniq.push(s); }
+    });
+    if (!uniq.length) { appToast("这段回复里没找到英文标签"); return; }
+    currentTags = uniq.map(function (s) { return { t: s, p: "custom", lock: false }; });
+    renderTags();
+    refreshStats();
+    switchPage("generate");
+    appToast("已导入 " + uniq.length + " 个标签，可再点「随机生成」或手动改");
+  }
+
+  document.getElementById("aiSend").addEventListener("click", aiSendMsg);
+  document.getElementById("aiStop").addEventListener("click", function () {
+    if (window.Android && window.Android.aiStop) window.Android.aiStop();
+    appToast("已中断");
+  });
+  document.getElementById("aiCfgBtn").addEventListener("click", function () {
+    const b = document.getElementById("aiCfgBox");
+    b.style.display = (b.style.display === "none") ? "" : "none";
+  });
+  document.getElementById("aiClear").addEventListener("click", function () {
+    appConfirm("清空全部对话记录？", function () {
+      aiMsgs = [];
+      aiSaveHistory();
+      aiRender();
+      appToast("已清空");
+    });
+  });
+  document.getElementById("aiPing").addEventListener("click", function () {
+    if (!window.Android || !window.Android.aiPing) { appToast("仅 APK 内可用"); return; }
+    const el = document.getElementById("aiCfgInfo");
+    el.style.color = "var(--muted)";
+    el.textContent = "正在测试连接…";
+    window.Android.aiPing(JSON.stringify(aiCfg()));
+  });
+  document.getElementById("aiPreset").addEventListener("change", function () {
+    aiApplyPreset(this.value, false);
+  });
+  document.getElementById("aiPresetApply").addEventListener("click", function () {
+    aiApplyPreset(document.getElementById("aiPreset").value, false);
+    appToast("已套用预设");
+  });
+  document.getElementById("aiTemp").addEventListener("input", function () {
+    document.getElementById("aiTempVal").textContent = this.value;
+  });
+  ["aiBase", "aiKey", "aiModelName", "aiSys", "aiTemp"].forEach(function (id) {
+    document.getElementById(id).addEventListener("change", function () { aiSave(); aiUpdateBadge(); });
+  });
+  document.getElementById("aiInput").addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      if (e.preventDefault) e.preventDefault();
+      aiSendMsg();
+    }
+  });
+
+  // ================= 完成提示音 =================
+  let sndCfg = { on: true, uri: "", title: "默认（系统通知音）" };
+
+  function sndSave() {
+    try { localStorage.setItem("pg_snd", JSON.stringify(sndCfg)); } catch (e) {}
+    const su = document.getElementById("sndSummary");
+    if (su) su.textContent = sndCfg.on ? ("　" + sndCfg.title) : "　已关闭";
+    const sn = document.getElementById("sndNow");
+    if (sn) sn.textContent = sndCfg.title;
+  }
+  function sndLoad() {
+    try {
+      const s = JSON.parse(localStorage.getItem("pg_snd") || "null");
+      if (s && typeof s === "object") {
+        sndCfg = {
+          on: s.on !== false,
+          uri: s.uri || "",
+          title: s.title || "默认（系统通知音）"
+        };
+      }
+    } catch (e) {}
+    document.getElementById("sndOn").checked = sndCfg.on;
+    sndSave();
+  }
+  function sndPlay(uri) {
+    if (!window.Android || !window.Android.playSound) return;
+    window.Android.playSound(uri === undefined ? sndCfg.uri : uri);
+  }
+  /** 出图 / 超分完成时调用 */
+  function playDoneSound() {
+    if (!sndCfg.on) return;
+    sndPlay();
+  }
+
+  function sndRenderList(arr) {
+    const box = document.getElementById("sndList");
+    box.innerHTML = "";
+    if (!arr || !arr.length) {
+      box.innerHTML = '<div class="empty">没读到系统音频</div>';
+      box.style.display = "";
+      return;
+    }
+    arr.forEach(function (it) {
+      const row = document.createElement("div");
+      row.style.cssText = "display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);";
+      const t = document.createElement("div");
+      t.style.cssText = "flex:1;font-size:12.5px;line-height:1.5;word-break:break-all;";
+      t.textContent = "[" + it.type + "] " + it.title;
+      const b = document.createElement("button");
+      b.className = "minibtn";
+      b.textContent = "选它";
+      b.onclick = function () {
+        sndCfg.uri = it.uri;
+        sndCfg.title = it.title;
+        sndCfg.on = true;
+        document.getElementById("sndOn").checked = true;
+        sndSave();
+        sndPlay(it.uri);
+        appToast("已选：" + it.title);
+      };
+      row.appendChild(t);
+      row.appendChild(b);
+      box.appendChild(row);
+    });
+    box.style.display = "";
+  }
+
+  window.systemSounds = function (arr) {
+    sndRenderList(arr);
+    const el = document.getElementById("sndInfo");
+    el.style.color = "var(--muted)";
+    el.textContent = "共 " + (arr ? arr.length : 0) + " 个系统音频，点「选它」即可选用并试听。";
+  };
+  window.audioPickResult = function (ok, uri, title) {
+    const el = document.getElementById("sndInfo");
+    if (ok) {
+      sndCfg.uri = uri;
+      sndCfg.title = title || "自选音频";
+      sndCfg.on = true;
+      document.getElementById("sndOn").checked = true;
+      sndSave();
+      sndPlay(uri);
+      el.style.color = "#4ade80";
+      el.textContent = "✅ 已选用：" + sndCfg.title;
+    } else {
+      el.style.color = "var(--muted)";
+      el.textContent = title || "已取消";
+    }
+  };
+
+  document.getElementById("sndOn").addEventListener("change", function () {
+    sndCfg.on = this.checked;
+    sndSave();
+    appToast(this.checked ? "提示音已开启" : "提示音已关闭");
+    if (this.checked) sndPlay();
+  });
+  document.getElementById("sndPickSys").addEventListener("click", function () {
+    if (!window.Android || !window.Android.listSystemSounds) { appToast("仅 APK 内可用"); return; }
+    const el = document.getElementById("sndInfo");
+    el.style.color = "var(--muted)";
+    el.textContent = "正在读取系统音频…";
+    window.Android.listSystemSounds();
+  });
+  document.getElementById("sndPickFile").addEventListener("click", function () {
+    if (!window.Android || !window.Android.pickAudioFile) { appToast("仅 APK 内可用"); return; }
+    window.Android.pickAudioFile();
+  });
+  document.getElementById("sndTest").addEventListener("click", function () { sndPlay(); });
+  document.getElementById("sndDefault").addEventListener("click", function () {
+    sndCfg = { on: true, uri: "", title: "默认（系统通知音）" };
+    document.getElementById("sndOn").checked = true;
+    sndSave();
+    sndPlay("");
+    appToast("已恢复默认提示音");
+  });
+
+  const I18N = {
+    "app.title": ["🎲 AI 动漫提示词随机生成器", "🎲 AI Anime Prompt Generator"],
+    "app.sub": ["生成 danbooru 风格标签 · 适配 SD1.5 动漫模型（Anything / MeinaMix 等）", "Generate danbooru-style tags · Tuned for SD1.5 anime models"],
+    "lbl.uilang": ["🌐 界面语言", "🌐 Interface language"],
+    "hint.uilang": ["切换 App 界面语言，不影响生成的提示词内容", "Switch the app UI language. Does not affect generated prompts."],
+    "opt.uizh": ["中文界面", "Chinese"],
+    "opt.uien": ["English UI", "English"],
+    "sec.settings": ["⚙️ 设置", "⚙️ Settings"],
+    "lbl.outlang": ["🌐 输出语言", "🌐 Output language"],
+    "hint.outlang": ["中文适合豆包等国产 AI；英文适合 SD1.5 模型", "Chinese suits domestic chatbots; English suits SD1.5 models"],
+    "opt.zh": ["中文", "Chinese"],
+    "opt.en": ["英文", "English"],
+    "opt.both": ["中英双语", "Bilingual"],
+    "lbl.nsfw": ["🔞 NSFW 内容", "🔞 NSFW content"],
+    "hint.nsfw": ["开启后加入成人标签", "Include adult tags when enabled"],
+    "lbl.level": ["🔥 NSFW 强度", "🔥 NSFW intensity"],
+    "hint.level": ["甜辣=无敏感词（国内平台可过审）/ 中度裸露 / 重度露骨", "Tier 1 uses platform-safe wording; intensity increases per tier"],
+    "opt.mild": ["甜辣 · 平台过审向", "Tier 1 · Platform-safe"],
+    "opt.soft": ["轻度 · 擦边挑逗", "Tier 2 · Suggestive"],
+    "opt.medium": ["中度 · 裸露", "Tier 3 · Mature"],
+    "opt.explicit": ["重度 · 露骨性行为", "Tier 4 · Adult"],
+    "opt.extreme": ["极限 · 全类别火力全开", "Tier 5 · Unrestricted"],
+    "lbl.scene": ["🎬 场景逻辑", "🎬 Scene logic"],
+    "hint.scene": ["自动 = 每次抽一个连贯场景（单一行为 + 匹配姿势/表情/地点）", "Auto = pick one coherent scene (single action + matching pose / expression / location)"],
+    "opt.auto": ["🎲 自动", "🎲 Auto"],
+    "lbl.style": ["🎨 风格预设", "🎨 Style preset"],
+    "opt.general": ["通用", "General"],
+    "opt.stylesoft": ["唯美 / 柔和", "Ethereal / Soft"],
+    "opt.dark": ["暗黑 / 哥特", "Dark / Gothic"],
+    "opt.cute": ["可爱 / Q版", "Cute / Chibi"],
+    "opt.painterly": ["厚涂 / 插画", "Painterly / Illustration"],
+    "lbl.count": ["🏷️ 标签丰富度", "🏷️ Tag richness"],
+    "hint.count": ["基础标签数（NSFW 标签会额外保留，总上限 77 词）", "Base tag count. NSFW tags are kept on top of this; hard cap is 77 tokens."],
+    "lbl.custom": ["✏️ 自定义标签", "✏️ Custom tags"],
+    "hint.custom": ["英文逗号分隔，始终放在开头，生成器自动补齐其余标签", "Comma separated. Always placed first; the rest is filled in automatically."],
+    "ph.custom": ["例如：fox ears, red ribbon, winter", "e.g. fox ears, red ribbon, winter"],
+    "lbl.params": ["🎛️ 出图参数", "🎛️ Sampling parameters"],
+    "lbl.sampler": ["采样器", "Sampler"],
+    "lbl.steps": ["步数", "Steps"],
+    "lbl.autorec": ["🎯 自动应用推荐参数", "🎯 Auto-apply recommended params"],
+    "hint.autorec": ["每次生成后，按提示词自动调整上方参数", "Adjust sampler / steps / CFG based on the prompt after each generation"],
+    "lbl.fast": ["⚡ 快速模型模式", "⚡ Fast model mode"],
+    "hint.fast": ["用 DMD2 / LCM 模型时打开（推荐 LCM + CFG 1 + 8 步）", "Enable for DMD2 / LCM models (LCM + CFG 1 + 8 steps recommended)"],
+    "lbl.weights": ["⚖️ 权重模式", "⚖️ Weight syntax"],
+    "hint.weights": ["给质量/主体标签加权，如 (masterpiece:1.2)", "Add weights to quality / subject tags, e.g. (masterpiece:1.2)"],
+    "lbl.preset": ["🎬 场景预设", "🎬 Scene presets"],
+    "hint.preset": ["一键套用整套主题标签，再点一次取消", "Apply a whole themed tag set; tap again to clear"],
+    "lbl.sentence": ["📝 自然语言描述句", "📝 Natural-language sentence"],
+    "hint.sentence": ["输出通顺中文长句，豆包这类对话 AI 效果更好", "Output a fluent sentence instead of tags — works better with chat-style AI"],
+    "lbl.exclude": ["🚫 排除标签", "🚫 Excluded tags"],
+    "hint.exclude": ["英文逗号分隔，这些标签永不出现", "Comma separated. These tags never appear."],
+    "ph.exclude": ["例如：glasses, hat, masculine", "e.g. glasses, hat, masculine"],
+    "lbl.extraneg": ["➕ 额外反向词", "➕ Extra negatives"],
+    "hint.extraneg": ["附加在自动反向词后面", "Appended after the auto-generated negatives"],
+    "ph.extraneg": ["例如：extra fingers, bad feet", "e.g. extra fingers, bad feet"],
+    "lbl.seed": ["🎲 种子 (Seed)", "🎲 Seed"],
+    "sec.sound": ["🔔 完成提示音", "🔔 Completion sound"],
+    "lbl.sndplay": ["出图 / 超分完成时播放", "Play when rendering / upscaling finishes"],
+    "snd.default": ["默认（系统通知音）", "Default (system notification)"],
+    "btn.sndsys": ["🔔 系统提示音", "🔔 System sound"],
+    "btn.sndfile": ["📁 音频文件", "📁 Audio file"],
+    "btn.sndtest": ["▶️ 试听", "▶️ Preview"],
+    "btn.sndreset": ["↩︎ 恢复默认", "↩︎ Reset to default"],
+    "sec.chars": ["🎮 角色库 · 米哈游", "🎮 Character Library · HoYoverse"],
+    "hint.chars": ["点角色选中（可多选，做双人图），再点取消。会自动带上作品标签", "Tap to select (multi-select for duo images), tap again to clear. Series tags are added automatically."],
+    "game.genshin": ["原神", "Genshin Impact"],
+    "game.hsr": ["星穹铁道", "Honkai: Star Rail"],
+    "game.hi3": ["崩坏3", "Honkai Impact 3rd"],
+    "game.zzz": ["绝区零", "Zenless Zone Zero"],
+    "sec.pos": ["📝 正向提示词", "📝 Positive prompt"],
+    "sec.neg": ["🚫 反向提示词", "🚫 Negative prompt"],
+    "out.empty": ["点击下方按钮生成", "Tap the button below to generate"],
+    "chip.hint": ["💡 点标签 = 重掷 · 长按 = 锁定", "💡 Tap a tag to reroll · long-press to lock"],
+    "sent.label": ["📝 自然语言描述句（复制/分享用这个）", "📝 Natural-language sentence (use this for copy / share)"],
+    "btn.copyneg": ["📋 复制反向", "📋 Copy negative"],
+    "btn.gen": ["🎲 随机生成", "🎲 Randomize"],
+    "btn.vary": ["🎲 微调变体", "🎲 Vary"],
+    "btn.copyall": ["📋 复制配方", "📋 Copy recipe"],
+    "sec.ld": ["🖼️ LocalDream 出图", "🖼️ Render with LocalDream"],
+    "btn.ldcheck": ["🔌 检测", "🔌 Check"],
+    "btn.ldgen": ["🖼️ 生成图片", "🖼️ Render"],
+    "btn.ldvary": ["🎲 微调重掷", "🎲 Vary & reroll"],
+    "btn.ldsave": ["💾 保存", "💾 Save"],
+    "btn.ldgal": ["📚 画廊", "📚 Gallery"],
+    "lbl.ldautogal": ["💾 出图后自动存入画廊", "💾 Auto-save to gallery"],
+    "lbl.ldbatch": ["🔢 每次生成张数", "🔢 Images per run"],
+    "opt.n1": ["1 张", "1"],
+    "opt.n2": ["2 张", "2"],
+    "opt.n4": ["4 张", "4"],
+    "opt.n6": ["6 张", "6"],
+    "opt.n8": ["8 张", "8"],
+    "lbl.ldautoup": ["🔍 出图后自动超分", "🔍 Auto-upscale after render"],
+    "btn.upprobe": ["🔎 自动探测", "🔎 Auto-detect"],
+    "btn.uptest": ["🔌 测试", "🔌 Test"],
+    "btn.upnow": ["🔍 对当前图超分", "🔍 Upscale current image"],
+    "sec.hist": ["🕘 历史 &amp; ⭐ 收藏", "🕘 History & ⭐ Favorites"],
+    "tab.hist": ["🕘 历史 ", "🕘 History "],
+    "tab.fav": ["⭐ 收藏 ", "⭐ Favorites "],
+    "sec.chat": ["💬 AI 对话", "💬 AI Chat"],
+    "lbl.aipreset": ["平台预设", "Provider preset"],
+    "ph.aikey": ["粘贴你自己的 Key", "Paste your own key"],
+    "lbl.aimodel": ["模型名", "Model"],
+    "lbl.aitemp": ["温度 ", "Temperature "],
+    "lbl.aisys": ["系统提示词（决定 AI 的角色）", "System prompt (defines the AI role)"],
+    "btn.aiping": ["🔌 测试连接", "🔌 Test connection"],
+    "btn.aiapply": ["↩︎ 套用预设", "↩︎ Apply preset"],
+    "btn.aisend": ["发送", "Send"],
+    "hint.aiinput": ["Enter 发送 · Shift+Enter 换行 · AI 回复下方可「↧ 导入提示词」", "Enter to send · Shift+Enter for a newline · tap ↧ under a reply to import it"],
+    "sec.theme": ["🎨 外观 / 主题", "🎨 Appearance"],
+    "lbl.uistyle": ["✨ UI 风格", "✨ UI style"],
+    "hint.uistyle": ["原神风 = 金边斜角 + 菱形装饰 + 衬线标题", "Genshin-style = gold bevels + diamond ornaments + serif headings"],
+    "opt.modern": ["现代磨砂", "Modern glass"],
+    "opt.genshin": ["原神风", "Genshin-style"],
+    "hint.swatch": ["点色卡快速换肤，或用取色器自定义（自动保存）", "Tap a swatch to re-skin, or use the pickers for a custom color (auto-saved)"],
+    "lbl.accent": ["主色 ", "Accent "],
+    "lbl.accent2": ["辅色 ", "Secondary "],
+    "lbl.bg": ["背景色 ", "Background "],
+    "lbl.blur": ["磨砂模糊强度", "Glass blur"],
+    "lbl.alpha": ["玻璃不透明度", "Glass opacity"],
+    "btn.resettheme": ["↺ 恢复默认主题", "↺ Reset theme"],
+    "sec.backup": ["💾 配置备份 &amp; 批量", "💾 Config backup & batch"],
+    "hint.backup": ["导出后把文本存起来（备忘录/微信收藏），换手机或重装粘贴回来即可恢复", "Save the exported text somewhere (notes app / cloud). Paste it back after reinstalling to restore."],
+    "ph.backup": ["点「导出配置」生成文本 / 或粘贴旧配置后点「导入配置」", "Tap Export to generate text, or paste an old config then tap Import"],
+    "btn.export": ["📤 导出配置", "📤 Export config"],
+    "btn.import": ["📥 导入配置", "📥 Import config"],
+    "btn.batchgen": ["🎲 批量生成 5 组到历史", "🎲 Batch-generate 5 sets into history"],
+    "sec.gallery": ["🖼️ 画廊", "🖼️ Gallery"],
+    "btn.galsel": ["☑️ 选择", "☑️ Select"],
+    "btn.galall": ["全选", "Select all"],
+    "btn.galrefresh": ["🔄 刷新", "🔄 Refresh"],
+    "btn.galbatchup": ["🔍 超分", "🔍 Upscale"],
+    "btn.galbatchsave": ["💾 保存", "💾 Save"],
+    "btn.galbatchdel": ["🗑 删除", "🗑 Delete"],
+    "btn.galbatchcancel": ["✖ 取消", "✖ Cancel"],
+    "btn.galvcopy": ["📋 复制配方", "📋 Copy recipe"],
+    "btn.galvup": ["🔍 超分这张", "🔍 Upscale this"],
+    "btn.galvvary": ["🎲 微调重掷", "🎲 Vary & reroll"],
+    "btn.galvclose": ["✖ 关闭", "✖ Close"],
+    "btn.cancel": ["取消", "Cancel"],
+    "btn.ok": ["确定", "OK"],
+    "nav.generate": ["生成", "Generate"],
+    "nav.chat": ["对话", "Chat"],
+    "nav.settings": ["设置", "Settings"],
+    "nav.chars": ["角色", "Characters"],
+    "nav.gallery": ["画廊", "Gallery"],
+    "nav.more": ["更多", "More"],
+    "ph.aiinput": ["描述你想要的画面，让它帮你写 danbooru 标签…", "Describe the image you want and let it write danbooru tags…"],
+    "ai.empty": ["还没有对话。<br>点右上角 ⚙️ 配置好 API 后，就能让它帮你写提示词了。", "No conversation yet.<br>Tap ⚙️ in the top right to configure an API, then it can write prompts for you."],
+    "warn.age": ["⚠️ <b>18+ 成人内容</b>。NSFW 标签仅限 <b>成年、虚构动漫角色</b> 的合意内容；<b>严禁</b>用于未成年、非自愿、真实人物或任何违法用途。", "⚠️ <b>18+ adult content.</b> NSFW tags are limited to consensual content involving <b>adult, fictional anime characters</b>. <b>Strictly prohibited</b> for minors, non-consensual scenarios, real people, or any unlawful use."],
+    "hint.uppath": ["超分模型路径：<code>&lt;模型目录&gt;/models/&lt;ID&gt;/upscaler.bin</code><br>ID = <code>upscaler_anime</code>（动漫）或 <code>upscaler_realistic</code>（写实）", "Upscaler path: <code>&lt;models_dir&gt;/models/&lt;ID&gt;/upscaler.bin</code><br>ID = <code>upscaler_anime</code> or <code>upscaler_realistic</code>"],
+    "warn.ld": ["⚠️ 出图前需先在 <b>LocalDream</b> 加载模型；超分需先打开它的「超分」页。分辨率需与 LocalDream 一致（一般 512×512）。", "⚠️ Load a model in <b>LocalDream</b> before rendering. Upscaling requires opening its Upscaler page first. Resolution must match LocalDream (usually 512×512)."],
+    "warn.aikey": ["🔑 API Key 只保存在本机 App 私有存储，不会上传到任何第三方服务器。请使用你自己注册的 Key，不要用别人分享的。", "🔑 Your API key is stored only in this app's private storage and is never uploaded anywhere. Use your own key — do not use keys shared by others."],
+    "hint.gallery": ["出图会自动存入这里。点「选择」进入多选模式，可批量<b>超分 / 保存相册 / 删除</b>", "Rendered images are saved here automatically. Tap Select for multi-select to batch <b>upscale / export / delete</b>."],
+    "lang.row": ["🌐 Interface language", "🌐 Interface language"]
+  };
+
+
+  const SCEN_EN = {"swim_beach":"Beach Swimsuit", "jk_class":"JK Classroom", "lingerie_bed":"Lingerie on Bed", "wet_shirt":"Wet Shirt", "gym_stretch":"Gym Stretching", "bikini_pool":"Bikini Poolside", "strip_tease":"Undressing Tease", "topless_cover":"Topless Covering", "stocking_tease":"Stockings Tease", "onsen_towel":"Onsen Towel", "nude_standing":"Nude Standing", "nude_lying":"Nude Lying", "nude_allfours":"Nude All Fours", "nude_shower":"Nude Shower", "nude_mirror":"Nude Mirror", "fellatio":"Fellatio", "paizuri":"Paizuri", "cowgirl":"Cowgirl", "missionary":"Missionary", "doggy":"Doggy Style", "masturbation":"Masturbation", "cunnilingus":"Cunnilingus", "sixtynine":"Sixty-Nine", "mating_press":"Mating Press", "prone_bone":"Prone Bone", "wall_standing":"Standing Against Wall", "reverse_cowgirl":"Reverse Cowgirl", "spooning":"Spooning", "lotus":"Lotus Position", "kneeling_sex":"Kneeling Sex", "car_sex":"Car Sex", "shower_sex":"Shower Sex", "outdoor_sex":"Outdoor Sex", "mast_fingers":"Finger Masturbation", "mast_clit":"Clitoral Rubbing", "mast_vibrator":"Vibrator Masturbation", "mast_dildo":"Dildo Masturbation", "mast_riding_dildo":"Riding Dildo", "mast_shower":"Shower Masturbation", "mast_pillow":"Pillow Humping", "mast_clothed":"Through Clothes", "mast_mirror":"Mirror Masturbation", "threesome":"Threesome", "spitroast":"Spit-roast", "bondage":"Bondage", "toy_play":"Toy Play", "creampie":"Creampie Finish", "bukkake":"Facial Finish", "squirting":"Squirting", "piledriver":"Piledriver", "full_nelson":"Full Nelson", "suspended":"Suspended Congress", "carrying_sex":"Carrying Position", "mast_anal":"Anal Toy Play", "mast_edging":"Edging"};
+  function scName(s) {
+    return (uiLang === "en" && SCEN_EN[s.id]) ? SCEN_EN[s.id] : s.name;
+  }
+
+
+  const REASON_EN = {"多主体构图":"multi-subject composition", "复杂性行为":"complex action", "局部动作特写":"action close-up", "体液细节":"fluid detail", "复杂姿势":"complex pose", "束缚":"restraint", "道具":"props", "全身/动态构图":"full-body / dynamic composition", "半身/特写（可降步数）":"upper body / close-up (fewer steps)", "标签密集":"dense tags", "标准单主体构图":"standard single-subject composition", "DMD2 / LCM 快速模型（LCM + CFG 1 + 8 步）":"DMD2 / LCM fast model"};
+  function trReason(s) {
+    if (uiLang !== "en") return s;
+    return String(s).split("、").map(function (x) { return REASON_EN[x] || x; }).join(", ");
+  }
+
+  // ================= 界面语言切换 =================
+  let uiLang = "zh";
+
+  function T(k) {
+    const e = I18N[k];
+    if (!e) return k;
+    return uiLang === "en" ? e[1] : e[0];
+  }
+
+  function applyUiLang() {
+    const i18n = document.querySelectorAll("[data-i18n]");
+    for (let i = 0; i < i18n.length; i++) {
+      const k = i18n[i].getAttribute("data-i18n");
+      if (I18N[k]) i18n[i].textContent = T(k);
+    }
+    const ih = document.querySelectorAll("[data-i18n-html]");
+    for (let i = 0; i < ih.length; i++) {
+      const k = ih[i].getAttribute("data-i18n-html");
+      if (I18N[k]) ih[i].innerHTML = T(k);
+    }
+    const ip = document.querySelectorAll("[data-i18n-ph]");
+    for (let i = 0; i < ip.length; i++) {
+      const k = ip[i].getAttribute("data-i18n-ph");
+      if (I18N[k]) ip[i].placeholder = T(k);
+    }
+    try { document.title = T("app.title"); } catch (e) {}
+    try { document.documentElement.lang = (uiLang === "en" ? "en" : "zh-CN"); } catch (e) {}
+    // 动态区域重绘
+    try { refreshStats(); } catch (e) {}
+    try { renderLists(); } catch (e) {}
+    try { aiRender(); } catch (e) {}
+    try { sndSave(); } catch (e) {}
+    try { aiUpdateBadge(); } catch (e) {}
+  }
+
+  function setUiLang(v, save) {
+    uiLang = (v === "en") ? "en" : "zh";
+    const sel = document.getElementById("uiLang");
+    if (sel && sel.value !== uiLang) sel.value = uiLang;
+    if (save !== false) {
+      try { localStorage.setItem("pg_uilang", uiLang); } catch (e) {}
+    }
+    applyUiLang();
+  }
+
+  function uiLangLoad() {
+    let v = "zh";
+    try { v = localStorage.getItem("pg_uilang") || "zh"; } catch (e) {}
+    setUiLang(v, false);
+  }
+
+  document.getElementById("uiLang").addEventListener("change", function () {
+    setUiLang(this.value, true);
+    appToast(uiLang === "en" ? "Switched to English UI" : "已切换到中文界面");
+  });
+
+  // initial
+  loadStore();
+  loadChars();
+  renderLists();
+  renderScenes();
+  renderChars();
+  initCollapsible();
+  refreshScenarioOptions();
+  aiLoad();
+  sndLoad();
+  uiLangLoad();
+  (function () {
+    try {
+      const v = localStorage.getItem("pg_uistyle") || "modern";
+      document.getElementById("uiStyle").value = v;
+      setUiStyle(v, false);
+    } catch (e) {}
+  })();
+  genAll();
+  refreshGalBadge();
+})();
+</script>
+</body>
+</html>
